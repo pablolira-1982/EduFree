@@ -50,7 +50,7 @@ function genExercises(
     };
   };
 
-  const short = concept.length > 50 ? concept.substring(0, 50) + '...' : concept;
+  const short = concept.length > 50 ? concept.substring(0, 50).trim() + '.' : concept;
 
   return [
     makeQ(1,
@@ -130,7 +130,7 @@ export function buildSubject(
       id: `${config.id}_t${num}`,
       number: num,
       title: `${num}. ${title}`,
-      description: `${concept.substring(0, 75)}... (${ageGroup})`,
+      description: `${concept.substring(0, 75).trim()} (${ageGroup})`,
       level,
       ageGroup,
       lessons: [lesson]

@@ -16,9 +16,22 @@ public class MainActivity extends BridgeActivity {
     private boolean ttsReady = false;
 
     public class AndroidTTSInterface {
+        private String sanitizeSpeechText(String text) {
+            if (text == null) return "";
+            return text.replaceAll("\\.{2,}", " ")
+                       .replaceAll("…", " ")
+                       .replaceAll("[!¡]", ".")
+                       .replaceAll("['\"“”‘’()]", " ")
+                       .replaceAll("\\s*[/\\\\]\\s*", " ou ")
+                       .replaceAll("\\s+", " ")
+                       .trim();
+        }
+
         @JavascriptInterface
         public void speak(String text, String lang) {
-            if (text == null || text.trim().isEmpty()) {
+            String clean = sanitizeSpeechText(text);
+            if (clean.isEmpty()) {
+                notifyWebTTSEnd();
                 return;
             }
 
@@ -36,11 +49,13 @@ public class MainActivity extends BridgeActivity {
                     textToSpeech.stop();
                     textToSpeech.setLanguage(locale);
                     textToSpeech.setSpeechRate(0.95f);
-                    textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "EduFree_TTS_END_" + System.currentTimeMillis());
+                    textToSpeech.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "EduFree_TTS_END_" + System.currentTimeMillis());
                 } catch (Exception e) {
                     e.printStackTrace();
                     notifyWebTTSEnd();
                 }
+            } else {
+                notifyWebTTSEnd();
             }
         }
 
@@ -53,9 +68,10 @@ public class MainActivity extends BridgeActivity {
                     int total = array.length();
                     for (int i = 0; i < total; i++) {
                         org.json.JSONObject obj = array.getJSONObject(i);
-                        String text = obj.optString("text", "");
+                        String rawText = obj.optString("text", "");
+                        String clean = sanitizeSpeechText(rawText);
                         String lang = obj.optString("lang", "pt-BR");
-                        if (text.trim().isEmpty()) continue;
+                        if (clean.isEmpty()) continue;
 
                         Locale locale;
                         if ("en-US".equalsIgnoreCase(lang) || "en".equalsIgnoreCase(lang)) {
@@ -69,7 +85,7 @@ public class MainActivity extends BridgeActivity {
                         textToSpeech.setLanguage(locale);
                         textToSpeech.setSpeechRate(0.95f);
                         String utteranceId = (i == total - 1) ? ("EduFree_TTS_END_" + System.currentTimeMillis()) : ("EduFree_TTS_SEG_" + i);
-                        textToSpeech.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId);
+                        textToSpeech.speak(clean, TextToSpeech.QUEUE_ADD, null, utteranceId);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

@@ -10,6 +10,160 @@ interface Props {
   onStartExercises: () => void;
 }
 
+function getEnglishPronunciationData(lesson: LessonItem): { sectionTitle: string; items: Array<{ en: string; pt: string }> } {
+  const titleLower = lesson.title.toLowerCase();
+
+  // 1. Verbo To Be
+  if (titleLower.includes('to be')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Verbo To Be)',
+      items: [
+        { en: 'To Be', pt: 'Ser ou Estar' },
+        { en: 'I am', pt: 'Eu sou / estou' },
+        { en: 'You are', pt: 'Você é / está' },
+        { en: 'He is', pt: 'Ele é / está' },
+        { en: 'She is', pt: 'Ela é / está' },
+        { en: 'It is', pt: 'Ele ou Ela (neutro)' },
+        { en: 'We are', pt: 'Nós somos / estamos' },
+        { en: 'They are', pt: 'Eles são / estão' }
+      ]
+    };
+  }
+
+  // 2. Cumprimentos e Apresentações (Greetings)
+  if (titleLower.includes('cumprimento') || titleLower.includes('greeting')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Greetings & Apresentações)',
+      items: [
+        { en: 'Hello', pt: 'Olá' },
+        { en: 'Good morning', pt: 'Bom dia' },
+        { en: 'Good afternoon', pt: 'Boa tarde' },
+        { en: 'Good night', pt: 'Boa noite' },
+        { en: 'How are you?', pt: 'Como vai você?' },
+        { en: 'Nice to meet you', pt: 'Prazer em te conhecer' },
+        { en: 'My name is Paul', pt: 'Meu nome é Paulo' },
+        { en: 'I am a student', pt: 'Eu sou um estudante' }
+      ]
+    };
+  }
+
+  // 3. Pronomes Pessoais (Personal Pronouns)
+  if (titleLower.includes('pronome') || titleLower.includes('pronoun')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Pronomes Pessoais)',
+      items: [
+        { en: 'I', pt: 'Eu' },
+        { en: 'You', pt: 'Você / Vocês' },
+        { en: 'He', pt: 'Ele' },
+        { en: 'She', pt: 'Ela' },
+        { en: 'It', pt: 'Ele ou Ela (objeto/animal)' },
+        { en: 'We', pt: 'Nós' },
+        { en: 'They', pt: 'Eles ou Elas' }
+      ]
+    };
+  }
+
+  // 4. Números, Dias e Meses
+  if (titleLower.includes('número') || titleLower.includes('numero') || titleLower.includes('dias') || titleLower.includes('meses')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Números e Dias)',
+      items: [
+        { en: 'One', pt: 'Um (1)' },
+        { en: 'Ten', pt: 'Dez (10)' },
+        { en: 'One hundred', pt: 'Cem (100)' },
+        { en: 'Monday', pt: 'Segunda-feira' },
+        { en: 'Friday', pt: 'Sexta-feira' },
+        { en: 'Sunday', pt: 'Domingo' },
+        { en: 'October', pt: 'Outubro' }
+      ]
+    };
+  }
+
+  // 5. Demonstrativos
+  if (titleLower.includes('demonstrativo') || titleLower.includes('this') || titleLower.includes('that')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Demonstrativos)',
+      items: [
+        { en: 'This', pt: 'Este / Esta (perto)' },
+        { en: 'That', pt: 'Aquele / Aquela (longe)' },
+        { en: 'These', pt: 'Estes / Estas' },
+        { en: 'Those', pt: 'Aqueles / Aquelas' },
+        { en: 'This book', pt: 'Este livro' },
+        { en: 'Those birds', pt: 'Aqueles pássaros' }
+      ]
+    };
+  }
+
+  // 6. Cores e Objetos Escolares
+  if (titleLower.includes('cor') || titleLower.includes('objeto') || titleLower.includes('escolar')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Cores e Materiais)',
+      items: [
+        { en: 'Blue', pt: 'Azul' },
+        { en: 'Red', pt: 'Vermelho' },
+        { en: 'Pencil', pt: 'Lápis' },
+        { en: 'Book', pt: 'Livro' },
+        { en: 'Notebook', pt: 'Caderno' }
+      ]
+    };
+  }
+
+  // 7. Família
+  if (titleLower.includes('família') || titleLower.includes('familia') || titleLower.includes('family')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Family Members)',
+      items: [
+        { en: 'Father', pt: 'Pai' },
+        { en: 'Mother', pt: 'Mãe' },
+        { en: 'Brother', pt: 'Irmão' },
+        { en: 'Sister', pt: 'Irmã' },
+        { en: 'Grandparents', pt: 'Avós' }
+      ]
+    };
+  }
+
+  // 8. Opostos
+  if (titleLower.includes('oposto') || titleLower.includes('opposite')) {
+    return {
+      sectionTitle: 'Pronúncia Nativa (Opposites)',
+      items: [
+        { en: 'Big', pt: 'Grande' },
+        { en: 'Small', pt: 'Pequeno' },
+        { en: 'Fast', pt: 'Rápido' },
+        { en: 'Slow', pt: 'Lento' },
+        { en: 'A big house', pt: 'Uma casa grande' },
+        { en: 'A small car', pt: 'Um carro pequeno' }
+      ]
+    };
+  }
+
+  // 9. Extração inteligente de termos entre aspas
+  const textToScan = `${lesson.content.description} ${lesson.content.exampleText}`;
+  const quoteMatches = textToScan.match(/'([^']+)'/g);
+  if (quoteMatches && quoteMatches.length > 0) {
+    const ptAccentsRegex = /[áàâãéêíóôõúüçÁÀÂÃÉÊÍÓÔÕÚÜÇ]/i;
+    const unique = Array.from(new Set(quoteMatches.map(m => m.replace(/'/g, '').trim())))
+      .filter(w => !ptAccentsRegex.test(w) && w.length > 1)
+      .slice(0, 8);
+    if (unique.length >= 2) {
+      return {
+        sectionTitle: `Pronúncia Nativa (${lesson.title.replace(/\([^)]+\)/g, '').trim()})`,
+        items: unique.map(word => ({ en: word, pt: 'Toque para ouvir' }))
+      };
+    }
+  }
+
+  // Fallback padrão
+  return {
+    sectionTitle: 'Pronúncia Nativa (Vocabulário da Aula)',
+    items: [
+      { en: 'Listen and repeat', pt: 'Ouça e repita' },
+      { en: 'Practice daily', pt: 'Pratique diariamente' },
+      { en: 'Great job!', pt: 'Excelente trabalho!' }
+    ]
+  };
+}
+
 export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises }) => {
   const [activeTab, setActiveTab] = useState<'aula' | 'exercicios' | 'resumo'>('aula');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -43,7 +197,7 @@ export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises
       setIsPlayingAudio(false);
     } else {
       const isEnglish = lesson.subjectId === 'ingles';
-      const speechText = `${lesson.content.questionPrompt}. ${lesson.content.description}. ${lesson.content.numeratorExplanation}. ${lesson.content.denominatorExplanation}. ${lesson.content.exampleText}`;
+      const speechText = `${lesson.content.questionPrompt}. ${lesson.content.description}. ${lesson.content.exampleText}`;
       setIsPlayingAudio(true);
       tts.speak(speechText, isEnglish ? 'bilingual-en' : 'pt-BR', () => {
         setIsPlayingAudio(false);
@@ -318,70 +472,65 @@ export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises
               </div>
             </div>
           ) : lesson.subjectId === 'ingles' ? (
-            /* Card Didático de Pronúncia Interativa em Inglês */
-            <div style={{
-              backgroundColor: '#FDF2F8',
-              borderRadius: '16px',
-              padding: '18px 20px',
-              border: '1.5px solid #F472B6',
-              marginBottom: '20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '22px' }}>🇬🇧</span>
-                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#9D174D' }}>
-                    Pronúncia Nativa (To Be & Pronomes)
-                  </h4>
-                </div>
-                <span style={{ fontSize: '11px', backgroundColor: '#FCE7F3', color: '#BE185D', padding: '3px 8px', borderRadius: '10px', fontWeight: 600 }}>
-                  Toque para ouvir 🔊
-                </span>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
-                {[
-                  { en: 'To Be', pt: 'Ser / Estar' },
-                  { en: 'I am', pt: 'Eu sou/estou' },
-                  { en: 'You are', pt: 'Você é/está' },
-                  { en: 'He is', pt: 'Ele é/está' },
-                  { en: 'She is', pt: 'Ela é/está' },
-                  { en: 'We are', pt: 'Nós somos/estamos' },
-                  { en: 'They are', pt: 'Eles são/estão' },
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleSpeakWord(item.en, 'en-US')}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      backgroundColor: '#FFFFFF',
-                      border: '1px solid #FBCFE8',
-                      borderRadius: '10px',
-                      padding: '8px 6px',
-                      cursor: 'pointer',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#DB2777' }}>{item.en}</span>
-                      <span style={{ fontSize: '11px' }}>🔊</span>
+            /* Card Didático de Pronúncia Interativa em Inglês adaptado para cada aula */
+            (() => {
+              const pronData = getEnglishPronunciationData(lesson);
+              return (
+                <div style={{
+                  backgroundColor: '#FDF2F8',
+                  borderRadius: '16px',
+                  padding: '18px 20px',
+                  border: '1.5px solid #F472B6',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '22px' }}>🇬🇧</span>
+                      <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#9D174D' }}>
+                        {pronData.sectionTitle}
+                      </h4>
                     </div>
-                    <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>{item.pt}</span>
-                  </button>
-                ))}
-              </div>
+                    <span style={{ fontSize: '11px', backgroundColor: '#FCE7F3', color: '#BE185D', padding: '3px 8px', borderRadius: '10px', fontWeight: 600 }}>
+                      Toque para ouvir 🔊
+                    </span>
+                  </div>
 
-              <div style={{ fontSize: '13px', color: '#831843', lineHeight: 1.5, backgroundColor: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid #FCE7F3' }}>
-                {lesson.content.numeratorExplanation}
-              </div>
-              <div style={{ fontSize: '13px', color: '#9D174D', lineHeight: 1.5 }}>
-                {lesson.content.denominatorExplanation}
-              </div>
-            </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                    {pronData.items.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSpeakWord(item.en, 'en-US')}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #FBCFE8',
+                          borderRadius: '10px',
+                          padding: '8px 6px',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: '#DB2777' }}>{item.en}</span>
+                          <span style={{ fontSize: '11px' }}>🔊</span>
+                        </div>
+                        <span style={{ fontSize: '10px', color: '#6B7280', marginTop: '2px', textAlign: 'center' }}>{item.pt}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize: '12px', color: '#9D174D', backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #FCE7F3', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>💡</span>
+                    <span>Toque nos botões acima para treinar a pronúncia com voz nativa em inglês.</span>
+                  </div>
+                </div>
+              );
+            })()
           ) : (
             /* Infográfico Conceitual Dinâmico e Didático para outras matérias (Ciências, História, etc.) */
             <div style={{

@@ -8,9 +8,9 @@ export interface VoiceOption {
   gender?: 'female' | 'male';
 }
 
-import { parseBilingualSegments, type SpeechSegment } from './bilingual-tts';
+import { parseBilingualSegments, cleanSpeechText, type SpeechSegment } from './bilingual-tts';
 
-export { parseBilingualSegments, type SpeechSegment };
+export { parseBilingualSegments, cleanSpeechText, type SpeechSegment };
 
 export const MICROSOFT_EDGE_NEURAL_VOICES: VoiceOption[] = [
   {
@@ -122,7 +122,7 @@ export class TTSEngine {
    * Se offline e não houver cache, utiliza fallback inteligente do SpeechSynthesis.
    */
   public async speak(text: string, locale: string = 'pt-BR', onEnd?: () => void): Promise<void> {
-    const cleanText = text.trim();
+    const cleanText = cleanSpeechText(text);
     if (!cleanText) {
       if (onEnd) onEnd();
       return;
@@ -151,7 +151,8 @@ export class TTSEngine {
         }
 
         const targetLang = locale === 'bilingual-en' || locale === 'bilingual' ? 'pt-BR' : locale;
-        (window as any).AndroidTTS.speak(cleanText, targetLang);
+        const speechPureText = cleanText.replace(/[()]/g, ' ').replace(/['"“”‘’]/g, '').replace(/\s+/g, ' ').trim();
+        (window as any).AndroidTTS.speak(speechPureText, targetLang);
         return;
       } catch (e) {
         console.warn('Falha no AndroidTTS nativo:', e);
