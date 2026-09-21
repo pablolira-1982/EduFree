@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ExerciseItem } from '../core/types';
 import { sound } from '../engine/sound-engine';
 import { tts } from '../engine/tts-engine';
+import { isFavorite, toggleFavorite } from '../db/database';
 
 interface Props {
   exercise: ExerciseItem;
@@ -12,6 +13,26 @@ interface Props {
 export const ExerciseScreen: React.FC<Props> = ({ exercise, onBack, onVerify }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPlayingSpeech, setIsPlayingSpeech] = useState<boolean>(false);
+  const [favorited, setFavorited] = useState<boolean>(false);
+
+  useEffect(() => {
+    isFavorite(exercise.lessonId || exercise.id).then(setFavorited);
+  }, [exercise.id, exercise.lessonId]);
+
+  const handleToggleFavorite = async () => {
+    sound.playPop();
+    const favId = exercise.lessonId || exercise.id;
+    const newState = await toggleFavorite({
+      id: favId,
+      type: 'exercise',
+      title: exercise.prompt.substring(0, 45) + (exercise.prompt.length > 45 ? '...' : ''),
+      subtitle: `Questão ${exercise.questionNumber} de ${exercise.totalQuestions}`,
+      subjectId: exercise.lessonId?.split('_')[0] || 'geral',
+      subjectTitle: 'Exercício',
+      subjectColor: '#1769F4'
+    });
+    setFavorited(newState);
+  };
 
   const handleToggleSpeech = () => {
     if (isPlayingSpeech) {
@@ -73,27 +94,51 @@ export const ExerciseScreen: React.FC<Props> = ({ exercise, onBack, onVerify }) 
           </h2>
         </div>
 
-        {/* Botão para ouvir questão com voz humana */}
-        <button
-          onClick={handleToggleSpeech}
-          style={{
-            background: isPlayingSpeech ? '#1769F4' : '#F1F5F9',
-            color: isPlayingSpeech ? '#FFFFFF' : '#1769F4',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '6px 10px',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-          title="Ouvir questão com voz natural da Microsoft"
-        >
-          <span>{isPlayingSpeech ? '⏹️' : '🔊'}</span>
-          <span>{isPlayingSpeech ? 'Parar' : 'Ouvir'}</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Botão de Favorito */}
+          <button
+            onClick={handleToggleFavorite}
+            aria-label={favorited ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+            style={{
+              background: favorited ? '#FEE2E2' : '#F1F5F9',
+              border: favorited ? '1px solid #FCA5A5' : '1px solid #E2E8F0',
+              borderRadius: '12px',
+              padding: '6px 10px',
+              fontSize: '15px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              transform: favorited ? 'scale(1.05)' : 'scale(1)'
+            }}
+            title={favorited ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+          >
+            {favorited ? '❤️' : '🤍'}
+          </button>
+
+          {/* Botão para ouvir questão com voz humana */}
+          <button
+            onClick={handleToggleSpeech}
+            style={{
+              background: isPlayingSpeech ? '#1769F4' : '#F1F5F9',
+              color: isPlayingSpeech ? '#FFFFFF' : '#1769F4',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '6px 10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="Ouvir questão com voz natural da Microsoft"
+          >
+            <span>{isPlayingSpeech ? '⏹️' : '🔊'}</span>
+            <span>{isPlayingSpeech ? 'Parar' : 'Ouvir'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Barra de Progresso Superior */}

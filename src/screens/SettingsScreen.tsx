@@ -169,13 +169,9 @@ export const SettingsScreen: React.FC<Props> = ({ profile, onBack, onUpdateProfi
             <div style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', borderTop: '1px solid #F1F5F9', flexWrap: 'wrap' }}>
               <button
                 type="button"
-                onClick={async () => {
-                  const granted = await sound.requestAudioPermission();
-                  if (granted) {
-                    alert('Permissão de áudio e microfone ativa com sucesso! 🎙️✅');
-                  } else {
-                    alert('Permissão de áudio recusada ou bloqueada nas definições do sistema.');
-                  }
+                onClick={() => {
+                  sound.unlockAudio();
+                  sound.playExplosion();
                 }}
                 style={{
                   backgroundColor: '#F8FAFC',
@@ -191,15 +187,16 @@ export const SettingsScreen: React.FC<Props> = ({ profile, onBack, onUpdateProfi
                   gap: '6px'
                 }}
               >
-                🎙️ Permissão de Áudio
+                💥 Testar Efeito Sonoro (BOOM)
               </button>
 
               <button
                 type="button"
                 onClick={() => {
+                  sound.unlockAudio();
                   const currentVoice = profile.settings.ttsVoice || 'pt-BR-FranciscaNeural';
                   const voiceName = currentVoice.includes('Antonio') ? 'Antônio' : currentVoice.includes('Thalita') ? 'Thalita' : 'Francisca';
-                  tts.speak(`Olá! Eu sou a voz de ${voiceName} no EduFree. Minha voz é natural, humana e clara, sem som de robô!`, profile.locale);
+                  tts.speak(`Olá! Eu sou a voz de ${voiceName} no EduFree. Minha voz funciona 100% offline e clara!`, profile.locale);
                 }}
                 style={{
                   backgroundColor: '#EFF6FF',
@@ -215,7 +212,7 @@ export const SettingsScreen: React.FC<Props> = ({ profile, onBack, onUpdateProfi
                   gap: '6px'
                 }}
               >
-                🔊 Ouvir Teste da Voz Humana
+                🔊 Ouvir Teste da Voz
               </button>
             </div>
           </div>

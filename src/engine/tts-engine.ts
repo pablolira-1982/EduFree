@@ -134,6 +134,30 @@ export class TTSEngine {
     const isBilingual = locale === 'bilingual-en' || locale === 'bilingual' || 
                         (locale === 'en-US' && (cleanText.includes('significa') || cleanText.includes('Qual é') || cleanText.includes('Como se')));
 
+    // 0. Prioridade no APK Android: Text-to-Speech nativo do sistema Android (100% offline)
+    if (typeof window !== 'undefined' && (window as any).AndroidTTS) {
+      try {
+        (window as any).onAndroidTTSEnd = () => {
+          this.isSpeaking = false;
+          if (onEnd) onEnd();
+        };
+
+        if (isBilingual) {
+          const segments = parseBilingualSegments(cleanText);
+          if (typeof (window as any).AndroidTTS.speakSegments === 'function' && segments.length > 0) {
+            (window as any).AndroidTTS.speakSegments(JSON.stringify(segments));
+            return;
+          }
+        }
+
+        const targetLang = locale === 'bilingual-en' || locale === 'bilingual' ? 'pt-BR' : locale;
+        (window as any).AndroidTTS.speak(cleanText, targetLang);
+        return;
+      } catch (e) {
+        console.warn('Falha no AndroidTTS nativo:', e);
+      }
+    }
+
     // Selecionar voz ou modo bilíngue adequado
     let voiceId = this.preferredVoiceId;
     if (isBilingual) {
@@ -235,7 +259,7 @@ export class TTSEngine {
 
     if (isBilingual) {
       const segments = parseBilingualSegments(text);
-      if (segments.length > 1) {
+      if (segments.length > 0) {
         this.speakSegmentsWithSpeechSynthesis(segments, onEnd);
         return;
       }
@@ -296,9 +320,11 @@ export class TTSEngine {
       utterance.lang = seg.lang;
       utterance.rate = 0.98;
 
-      const targetVoices = this.voices.filter(v => v.lang.toLowerCase().startsWith(seg.lang.substring(0, 2).toLowerCase()));
-      if (targetVoices.length > 0) {
-        utterance.voice = targetVoices[0];
+      const exactVoices = this.voices.filter(v => v.lang.toLowerCase().replace('_', '-') === seg.lang.toLowerCase());
+      const prefixVoices = this.voices.filter(v => v.lang.toLowerCase().startsWith(seg.lang.substring(0, 2).toLowerCase()));
+      const targetVoice = exactVoices[0] || prefixVoices[0];
+      if (targetVoice) {
+        utterance.voice = targetVoice;
       }
 
       utterance.onend = () => {
@@ -317,6 +343,15 @@ export class TTSEngine {
 
   public stop() {
     this.isSpeaking = false;
+
+    if (typeof window !== 'undefined' && (window as any).AndroidTTS) {
+      try {
+        (window as any).AndroidTTS.stop();
+      } catch (e) {
+        console.warn('Erro ao parar AndroidTTS:', e);
+      }
+    }
+
     if (this.currentAudio) {
       try {
         this.currentAudio.pause();

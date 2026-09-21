@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile, SubjectItem } from '../core/types';
+import { getAllFavorites, type FavoriteItem } from '../db/database';
 
 interface Props {
   profile: UserProfile;
@@ -19,6 +20,16 @@ export const HomeScreen: React.FC<Props> = ({
   onOpenActivities
 }) => {
   const [levelFilter, setLevelFilter] = useState<'todos' | 'basico' | 'intermediario' | 'avancado'>('todos');
+  const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
+
+  useEffect(() => {
+    const loadFavs = () => {
+      getAllFavorites().then(setFavorites);
+    };
+    loadFavs();
+    window.addEventListener('edufree_favorites_changed', loadFavs);
+    return () => window.removeEventListener('edufree_favorites_changed', loadFavs);
+  }, []);
 
   // Filtrar disciplinas ou módulos por nível pedagógico
   const filteredSubjects = subjects.filter((sub) => {
@@ -263,6 +274,114 @@ export const HomeScreen: React.FC<Props> = ({
             </span>
           </div>
         </div>
+
+        {/* Seção Meus Favoritos */}
+        {favorites.length > 0 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#1F2937' }}>
+                  Aulas Favoritas
+                </h4>
+                <span style={{ fontSize: '16px' }}>❤️</span>
+              </div>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#EF4444',
+                backgroundColor: '#FEE2E2',
+                border: '1px solid #FCA5A5',
+                padding: '2px 8px',
+                borderRadius: '10px'
+              }}>
+                {favorites.length} {favorites.length === 1 ? 'salva' : 'salvas'}
+              </span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              overflowX: 'auto',
+              paddingBottom: '6px',
+              scrollbarWidth: 'none'
+            }}>
+              {favorites.map((fav) => (
+                <div
+                  key={fav.id}
+                  onClick={() => {
+                    if (fav.subjectId) onSelectSubject(fav.subjectId);
+                    onOpenLesson(fav.id);
+                  }}
+                  style={{
+                    minWidth: '220px',
+                    maxWidth: '240px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    padding: '14px',
+                    border: '1.5px solid #FEE2E2',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.08)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    flexShrink: 0,
+                    transition: 'transform 0.15s ease'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        color: fav.subjectColor || '#EF4444',
+                        backgroundColor: `${fav.subjectColor || '#EF4444'}18`,
+                        padding: '2px 6px',
+                        borderRadius: '6px',
+                        textTransform: 'uppercase'
+                      }}>
+                        {fav.subjectTitle || 'Aula'}
+                      </span>
+                      <span style={{ fontSize: '13px' }}>❤️</span>
+                    </div>
+                    <div style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: '#1F2937',
+                      lineHeight: 1.35,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {fav.title}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: '#6B7280', fontWeight: 600 }}>
+                      {fav.subtitle || 'Estudar agora'}
+                    </span>
+                    <span style={{
+                      backgroundColor: '#EF4444',
+                      color: '#FFFFFF',
+                      borderRadius: '50%',
+                      width: '22px',
+                      height: '22px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: 800
+                    }}>
+                      ›
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Card Destaque: Atividades & Testes Separadas por Disciplinas */}
         {onOpenActivities && (

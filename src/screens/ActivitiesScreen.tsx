@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SubjectItem, TestMode } from '../core/types';
 import { tts } from '../engine/tts-engine';
+import { getAllFavorites } from '../db/database';
 
 interface Props {
   subjects: SubjectItem[];
@@ -14,8 +15,20 @@ export const ActivitiesScreen: React.FC<Props> = ({
   onBack
 }) => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || 'matematica');
-  const [selectedLevel, setSelectedLevel] = useState<'todos' | 'basico' | 'intermediario' | 'avancado'>('todos');
+  const [selectedLevel, setSelectedLevel] = useState<'todos' | 'basico' | 'intermediario' | 'avancado' | 'favoritos'>('todos');
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const loadFavs = () => {
+      getAllFavorites().then(favs => {
+        setFavoriteIds(new Set(favs.map(f => f.id)));
+      });
+    };
+    loadFavs();
+    window.addEventListener('edufree_favorites_changed', loadFavs);
+    return () => window.removeEventListener('edufree_favorites_changed', loadFavs);
+  }, []);
 
   const activeSubject = subjects.find(s => s.id === selectedSubjectId) || subjects[0];
 
@@ -33,6 +46,9 @@ export const ActivitiesScreen: React.FC<Props> = ({
   };
 
   const filteredThemes = activeSubject.themes.filter((theme) => {
+    if (selectedLevel === 'favoritos') {
+      return theme.lessons.some(l => favoriteIds.has(l.id)) || favoriteIds.has(`${activeSubject.id}_t${theme.number}`);
+    }
     if (selectedLevel === 'todos') return true;
     return theme.level === selectedLevel;
   });
@@ -182,23 +198,23 @@ export const ActivitiesScreen: React.FC<Props> = ({
           </div>
 
           <div style={{
-            backgroundColor: '#E2E8F0',
+            backgroundColor: '#F1F5F9',
             borderRadius: '14px',
             padding: '4px',
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '4px'
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: '3px'
           }}>
             <button
               onClick={() => setSelectedLevel('todos')}
               style={{
-                padding: '8px 4px',
+                padding: '8px 2px',
                 borderRadius: '10px',
                 border: 'none',
                 backgroundColor: selectedLevel === 'todos' ? '#1769F4' : 'transparent',
                 color: selectedLevel === 'todos' ? '#FFFFFF' : '#475569',
                 fontWeight: 700,
-                fontSize: '11px',
+                fontSize: '10px',
                 cursor: 'pointer'
               }}
             >
@@ -207,47 +223,62 @@ export const ActivitiesScreen: React.FC<Props> = ({
             <button
               onClick={() => setSelectedLevel('basico')}
               style={{
-                padding: '8px 4px',
+                padding: '8px 2px',
                 borderRadius: '10px',
                 border: 'none',
                 backgroundColor: selectedLevel === 'basico' ? '#00C48C' : 'transparent',
                 color: selectedLevel === 'basico' ? '#FFFFFF' : '#475569',
                 fontWeight: 700,
-                fontSize: '11px',
+                fontSize: '10px',
                 cursor: 'pointer'
               }}
             >
-              10-12a (Básico)
+              10-12a
             </button>
             <button
               onClick={() => setSelectedLevel('intermediario')}
               style={{
-                padding: '8px 4px',
+                padding: '8px 2px',
                 borderRadius: '10px',
                 border: 'none',
                 backgroundColor: selectedLevel === 'intermediario' ? '#1E88E5' : 'transparent',
                 color: selectedLevel === 'intermediario' ? '#FFFFFF' : '#475569',
                 fontWeight: 700,
-                fontSize: '11px',
+                fontSize: '10px',
                 cursor: 'pointer'
               }}
             >
-              13-14a (Médio)
+              13-14a
             </button>
             <button
               onClick={() => setSelectedLevel('avancado')}
               style={{
-                padding: '8px 4px',
+                padding: '8px 2px',
                 borderRadius: '10px',
                 border: 'none',
                 backgroundColor: selectedLevel === 'avancado' ? '#8B5CF6' : 'transparent',
                 color: selectedLevel === 'avancado' ? '#FFFFFF' : '#475569',
                 fontWeight: 700,
-                fontSize: '11px',
+                fontSize: '10px',
                 cursor: 'pointer'
               }}
             >
-              15-17a (Avanç.)
+              15-17a
+            </button>
+            <button
+              onClick={() => setSelectedLevel('favoritos')}
+              style={{
+                padding: '8px 2px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: selectedLevel === 'favoritos' ? '#EF4444' : 'transparent',
+                color: selectedLevel === 'favoritos' ? '#FFFFFF' : '#475569',
+                fontWeight: 700,
+                fontSize: '10px',
+                cursor: 'pointer'
+              }}
+            >
+              ❤️ Favs
             </button>
           </div>
         </div>

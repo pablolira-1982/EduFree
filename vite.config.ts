@@ -131,11 +131,13 @@ function edgeTTSPlugin(): Plugin {
       }
 
       // 1. Processamento Bilíngue: combina voz nativa portuguesa (Francisca) e inglesa (Jenny)
+      let resolvedVoice = voice;
       if (isBilingual) {
         const segments = parseBilingualSegments(text.trim());
-        const hasBothLanguages = segments.some(s => s.lang === 'en-US') && segments.some(s => s.lang === 'pt-BR');
+        const hasEnglish = segments.some(s => s.lang === 'en-US');
+        const hasPortuguese = segments.some(s => s.lang === 'pt-BR');
 
-        if (hasBothLanguages) {
+        if (hasEnglish && hasPortuguese) {
           const cacheKey = `bilingual_${rate}_${text.trim()}`;
           if (memoryCache.has(cacheKey)) {
             const cached = memoryCache.get(cacheKey)!;
@@ -183,11 +185,17 @@ function edgeTTSPlugin(): Plugin {
             res.end(combined);
             return;
           }
+        } else if (hasEnglish && !hasPortuguese) {
+          resolvedVoice = 'en-US-JennyNeural';
+        } else {
+          resolvedVoice = 'pt-BR-FranciscaNeural';
         }
       }
 
       // 2. Processamento Monolíngue Padrão
-      const singleVoice = voice === 'bilingual' ? 'pt-BR-FranciscaNeural' : voice;
+      const singleVoice = resolvedVoice === 'bilingual' 
+        ? (classifyTextLanguage(text.trim(), 'pt-BR') === 'en-US' ? 'en-US-JennyNeural' : 'pt-BR-FranciscaNeural')
+        : resolvedVoice;
       const cacheKey = `${singleVoice}_${rate}_${text.trim()}`;
       if (memoryCache.has(cacheKey)) {
         const cached = memoryCache.get(cacheKey)!;

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SubjectItem, TestMode } from '../core/types';
+import { sound } from '../engine/sound-engine';
+import { toggleFavorite, getAllFavorites } from '../db/database';
 
 interface Props {
   subject: SubjectItem;
@@ -19,6 +21,18 @@ export const SubjectScreen: React.FC<Props> = ({
   onStartTestSession
 }) => {
   const [levelTab, setLevelTab] = useState<'todos' | 'basico' | 'intermediario' | 'avancado'>('todos');
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const loadFavs = () => {
+      getAllFavorites().then(favs => {
+        setFavoriteIds(new Set(favs.map(f => f.id)));
+      });
+    };
+    loadFavs();
+    window.addEventListener('edufree_favorites_changed', loadFavs);
+    return () => window.removeEventListener('edufree_favorites_changed', loadFavs);
+  }, []);
 
   const filteredThemes = subject.themes
     .filter((theme) => {
@@ -361,9 +375,50 @@ export const SubjectScreen: React.FC<Props> = ({
                       {theme.number}
                     </span>
 
-                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1F2937' }}>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#1F2937', flex: 1 }}>
                       {theme.title}
                     </h4>
+
+                    {hasLesson && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          sound.playPop();
+                          const isFav = favoriteIds.has(lessonId);
+                          await toggleFavorite({
+                            id: lessonId,
+                            type: 'lesson',
+                            title: theme.title,
+                            subtitle: `Módulo ${theme.number}`,
+                            subjectId: subject.id,
+                            subjectTitle: subject.title,
+                            subjectColor: subject.color,
+                            themeNumber: theme.number
+                          });
+                          setFavoriteIds(prev => {
+                            const next = new Set(prev);
+                            if (isFav) next.delete(lessonId);
+                            else next.add(lessonId);
+                            return next;
+                          });
+                        }}
+                        style={{
+                          background: favoriteIds.has(lessonId) ? '#FEE2E2' : '#F1F5F9',
+                          border: favoriteIds.has(lessonId) ? '1px solid #FCA5A5' : '1px solid #E2E8F0',
+                          borderRadius: '10px',
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          fontSize: '15px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.15s ease'
+                        }}
+                        title={favoriteIds.has(lessonId) ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+                      >
+                        {favoriteIds.has(lessonId) ? '❤️' : '🤍'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Badges de Nível e Desbloqueado */}

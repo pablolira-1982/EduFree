@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { LessonItem } from '../core/types';
 import { tts } from '../engine/tts-engine';
+import { sound } from '../engine/sound-engine';
+import { isFavorite, toggleFavorite } from '../db/database';
 
 interface Props {
   lesson: LessonItem;
@@ -11,6 +13,29 @@ interface Props {
 export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises }) => {
   const [activeTab, setActiveTab] = useState<'aula' | 'exercicios' | 'resumo'>('aula');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [favorited, setFavorited] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    isFavorite(lesson.id).then(setFavorited);
+  }, [lesson.id]);
+
+  const handleToggleFavorite = async () => {
+    sound.playPop();
+    const newState = await toggleFavorite({
+      id: lesson.id,
+      type: 'lesson',
+      title: lesson.title,
+      subtitle: lesson.subtitle,
+      subjectId: lesson.subjectId,
+      subjectTitle: lesson.subjectId.charAt(0).toUpperCase() + lesson.subjectId.slice(1),
+      subjectColor: '#1769F4',
+      themeNumber: lesson.themeNumber
+    });
+    setFavorited(newState);
+    setToastMessage(newState ? '❤️ Salvo nos Favoritos!' : 'Removido dos Favoritos');
+    setTimeout(() => setToastMessage(null), 2200);
+  };
 
   const handleToggleSpeech = () => {
     if (isPlayingAudio) {
@@ -38,8 +63,33 @@ export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises
       maxWidth: '480px',
       margin: '0 auto',
       paddingBottom: '40px',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      position: 'relative'
     }}>
+      {/* Toast de Feedback */}
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          backgroundColor: '#1E293B',
+          color: '#FFFFFF',
+          padding: '10px 20px',
+          borderRadius: '9999px',
+          fontSize: '13px',
+          fontWeight: 700,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          {toastMessage}
+        </div>
+      )}
+
       {/* Header */}
       <div style={{
         padding: '16px 20px',
@@ -71,8 +121,25 @@ export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises
           </h2>
         </div>
 
-        <button style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6B7280' }}>
-          🤍
+        <button
+          onClick={handleToggleFavorite}
+          aria-label={favorited ? 'Remover dos favoritos' : 'Marcar favorito'}
+          style={{
+            background: favorited ? '#FEE2E2' : '#F1F5F9',
+            border: favorited ? '1px solid #FCA5A5' : '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '6px 10px',
+            fontSize: '18px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+            transform: favorited ? 'scale(1.08)' : 'scale(1)'
+          }}
+          title={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        >
+          {favorited ? '❤️' : '🤍'}
         </button>
       </div>
 

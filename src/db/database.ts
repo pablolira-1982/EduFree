@@ -15,11 +15,24 @@ export interface AudioCacheRecord {
   createdAt: number;
 }
 
+export interface FavoriteItem {
+  id: string; // lessonId ou exerciseId
+  type: 'lesson' | 'exercise';
+  title: string;
+  subtitle?: string;
+  subjectId: string;
+  subjectTitle: string;
+  subjectColor: string;
+  themeNumber?: number;
+  createdAt: number;
+}
+
 export class EduFreeDatabase extends Dexie {
   profiles!: Table<UserProfile, string>;
   progress!: Table<ProgressRecord, number>;
   packs!: Table<OfflinePack, string>;
   audioCache!: Table<AudioCacheRecord, string>;
+  favorites!: Table<FavoriteItem, string>;
 
   constructor() {
     super('EduFreeDatabase');
@@ -28,6 +41,13 @@ export class EduFreeDatabase extends Dexie {
       progress: '++id, lessonId, completed',
       packs: 'id, subject, installed',
       audioCache: 'key, createdAt'
+    });
+    this.version(3).stores({
+      profiles: 'id, name, locale',
+      progress: '++id, lessonId, completed',
+      packs: 'id, subject, installed',
+      audioCache: 'key, createdAt',
+      favorites: 'id, type, subjectId, createdAt'
     });
   }
 }
@@ -119,5 +139,48 @@ export async function initDatabase(): Promise<UserProfile> {
   }
 
   return profile;
+}
+
+export async function toggleFavorite(item: Omit<FavoriteItem, 'createdAt'>): Promise<boolean> {
+  try {
+    const existing = await db.favorites.get(item.id);
+    if (existing) {
+      await db.favorites.delete(item.id);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('edufree_favorites_changed', { detail: { id: item.id, isFavorite: false } }));
+      }
+      return false;
+    } else {
+      await db.favorites.put({
+        ...item,
+        createdAt: Date.now()
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('edufree_favorites_changed', { detail: { id: item.id, isFavorite: true } }));
+      }
+      return true;
+    }
+  } catch (e) {
+    console.error('Erro ao alternar favorito:', e);
+    return false;
+  }
+}
+
+export async function isFavorite(id: string): Promise<boolean> {
+  if (!id) return false;
+  try {
+    const found = await db.favorites.get(id);
+    return !!found;
+  } catch {
+    return false;
+  }
+}
+
+export async function getAllFavorites(): Promise<FavoriteItem[]> {
+  try {
+    return await db.favorites.orderBy('createdAt').reverse().toArray();
+  } catch {
+    return [];
+  }
 }
 

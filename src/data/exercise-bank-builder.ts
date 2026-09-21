@@ -395,44 +395,44 @@ const DISCIPLINE_QUESTION_BANKS: Record<string, QuestionTemplate[]> = {
 
   ingles: [
     {
-      prompt: 'Complete the sentence with the correct form of the Verb To Be: "She _____ a very dedicated student."',
+      prompt: 'Qual é a forma correta do Verbo To Be na frase: "She _____ a very dedicated student"?',
       correct: 'is',
       wrongs: ['are', 'am', 'be'],
-      explanation: 'With singular third-person pronouns (He, She, It), we use "is".'
+      explanation: 'Para a terceira pessoa do singular (He, She, It), usamos "is". Exemplo: "She is a student".'
     },
     {
-      prompt: 'What is the correct English translation for the greeting "Bom dia, como vai você?"',
+      prompt: 'Como se diz a saudação "Bom dia, como vai você?" em inglês?',
       correct: 'Good morning, how are you?',
       wrongs: [
         'Good night, who are you?',
         'Good afternoon, what is this?',
         'Goodbye, see you later'
       ],
-      explanation: '"Good morning" means Bom dia, and "How are you?" asks Como vai você.'
+      explanation: 'Em inglês, "Good morning" significa Bom dia, e "How are you?" significa Como vai você.'
     },
     {
-      prompt: 'Choose the correct plural form of the word "child":',
+      prompt: 'Qual é o plural irregular correto da palavra "child" (criança) em inglês?',
       correct: 'Children',
       wrongs: ['Childs', 'Childes', 'Childrens'],
-      explanation: '"Child" has an irregular plural in English: one child, two children.'
+      explanation: 'Em inglês, o plural de "child" (uma criança) é irregular: "children" (crianças).'
     },
     {
-      prompt: 'Which Question Word is used to ask about a specific PLACE or location?',
+      prompt: 'Qual Question Word usamos em inglês para perguntar sobre um LUGAR (Onde)?',
       correct: 'Where',
-      wrongs: ['When (tempo)', 'Who (pessoa)', 'Why (motivo)'],
-      explanation: '"Where" specifically inquires about place, as in "Where is the library?".'
+      wrongs: ['When', 'Who', 'Why'],
+      explanation: '"Where" significa Onde e pergunta sobre locais, como em "Where do you live?".'
     },
     {
-      prompt: 'Complete with Present Continuous: "Listen! The teacher _______ now."',
+      prompt: 'Complete a frase no Present Continuous: "Listen! The teacher _______ now."',
       correct: 'is speaking',
       wrongs: ['speaks', 'are speaking', 'speaking'],
-      explanation: 'Actions happening right now use is/are + verb-ing: "The teacher is speaking".'
+      explanation: 'Ações que acontecem agora usam o verbo To Be mais ing: "The teacher is speaking".'
     },
     {
-      prompt: 'How do you say the number "75" in English words?',
+      prompt: 'Como se escreve o número "75" por extenso em inglês?',
       correct: 'Seventy-five',
       wrongs: ['Seven-five', 'Seventeen-five', 'Sixty-five'],
-      explanation: '70 is seventy, so 75 is written as seventy-five.'
+      explanation: 'O número 70 é "seventy" e 5 é "five", formando "Seventy-five".'
     }
   ]
 };

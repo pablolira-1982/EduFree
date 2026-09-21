@@ -42,8 +42,8 @@ export const App: React.FC = () => {
       }
     });
 
-    // Notifica e solicita permissão de áudio na hora ao iniciar o app
-    sound.requestAudioPermission();
+    // Desbloqueia motor sonoro imediatamente na inicialização
+    sound.unlockAudio();
 
     // Desbloqueia AudioContext no primeiro toque/clique em mobile
     const handleFirstGesture = () => {
