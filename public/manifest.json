@@ -1,0 +1,18 @@
+{
+  "short_name": "EduFree",
+  "name": "EduFree — Educação Sem Limites",
+  "description": "Plataforma educativa gratuita, acessível e 100% offline para crianças e jovens.",
+  "icons": [
+    {
+      "src": "/assets/Logo_EduFree.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#00183c",
+  "theme_color": "#0B3D91",
+  "display": "standalone",
+  "orientation": "portrait"
+}

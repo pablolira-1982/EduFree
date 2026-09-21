@@ -1,0 +1,37 @@
+:root {
+  /* Paleta Oficial da Identidade Visual EduFree */
+  --navy: #0B3D91;            /* Azul Principal */
+  --navy-deep: #00183c;       /* Fundo da tela de abertura e base de Logo_principal.png */
+  --blue: #1E88E5;            /* Azul Secundário / Ação */
+  --cyan: #4FC3F7;            /* Azul Claro */
+  --green: #00C48C;           /* Verde Sucesso / Progresso */
+  --amber: #FFC107;           /* Amarelo Conquista / Moedas / Estrelas */
+  --coral: #FF6B6B;           /* Coral Destaque / Disciplinas */
+  --bg-light: #F8FAFC;        /* Fundo Claro Geral */
+  --surface: #FFFFFF;         /* Superfície dos Cartões e Modais */
+  --text-main: #1F2937;       /* Texto Primário Escuro */
+  --text-muted: #6B7280;      /* Texto Secundário Cinza */
+  --text-light: #94A3B8;      /* Texto Claro para Telas Escuras */
+  --border-light: #E2E8F0;    /* Bordas Suaves */
+
+  /* Dimensões e Estilo */
+  --radius-card: 20px;
+  --radius-pill: 9999px;
+  --radius-btn: 16px;
+  --shadow-sm: 0 2px 8px rgba(11, 61, 145, 0.06);
+  --shadow-card: 0 8px 24px rgba(11, 61, 145, 0.08);
+  --shadow-float: 0 12px 32px rgba(11, 61, 145, 0.15);
+
+  /* Transições e Tipografia */
+  --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modos de contraste / temas configuráveis */
+[data-theme='dark'] {
+  --bg-light: #0D1B35;
+  --surface: #132347;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border-light: #1E3A6E;
+}
