@@ -2473,16 +2473,16 @@ const BASE_SUBJECTS_DATA: SubjectItem[] = [
             "id": "hist_antiga",
             "subjectId": "historia",
             "themeNumber": 1,
-            "title": "O Berço da Civilização e Cidadania",
-            "subtitle": "Das Margens do Nilo à Democracia de Atenas",
-            "summary": "Escrita cuneiforme, pirâmides e a criação da cidadania.",
+            "title": "História: O Berço da Civilização e Cidadania",
+            "subtitle": "Módulo 1 — Das Margens dos Rios Férteis à Democracia de Atenas",
+            "summary": "Um panorama completo sobre o surgimento das primeiras civilizações: a escrita cuneiforme na Mesopotâmia, os faraós e a vida eterna no Egito Antigo, e o nascimento da cidadania e da democracia na Grécia Clássica.",
             "content": {
-              "questionPrompt": "Como surgiram as primeiras cidades e leis?",
-              "description": "Entre os rios Tigre e Eufrates e às margens do Rio Nilo, a agricultura irrigada gerou os primeiros centros urbanos. Na Grécia, nasceu a filosofia e a democracia.",
-              "numeratorExplanation": "Código de Hamurabi: um dos primeiros conjuntos de leis escritas da história.",
-              "denominatorExplanation": "Atenas e a Democracia: cidadãos reuniam-se na praça pública (Ágora) para debater os rumos da cidade.",
-              "exampleText": "As Olimpíadas modernas têm origem nos jogos atléticos celebrados em honra a Zeus na Grécia Antiga.",
-              "dailyLifeContext": "Leis escritas, tribunais e votações populares que temos hoje nasceram dessas sociedades antigas."
+              "questionPrompt": "Como as primeiras civilizações inventaram as cidades, as leis e a democracia?",
+              "description": "A história das grandes civilizações começou quando a humanidade aprendeu a dominar a agricultura nas margens férteis de grandes rios. No Crescente Fértil, entre os rios Tigre e Eufrates, os povos da Mesopotâmia criaram os primeiros centros urbanos do mundo, desenvolveram a escrita cuneiforme em placas de argila e estabeleceram o Código de Hamurabi, um dos primeiros conjuntos de leis escritas para organizar a vida social. Paralelamente, no vale fértil do Rio Nilo, floresceu a civilização do Egito Antigo, governada pelos faraós sob uma forte teocracia. Os egípcios acreditavam profundamente na vida após a morte, aperfeiçoaram a medicina e ergueram monumentais pirâmides de pedra que desafiam o tempo. Mais tarde, no Mar Mediterrâneo, a Grécia Antiga revolucionou o pensamento humano: enquanto Esparta formava guerreiros de ferro, Atenas reunia os seus cidadãos na praça pública para debater livremente, criando os pilares da democracia, da filosofia e do teatro que moldam a nossa sociedade até hoje.",
+              "numeratorExplanation": "Fundamento Histórico da Mesopotâmia e Egito: A irrigação permitiu colheitas abundantes e a criação dos primeiros Estados organizados, com leis codificadas, cobrança de impostos e obras públicas monumentais.",
+              "denominatorExplanation": "O Legado Grego e a Democracia: A participação cívica ateniense e o debate de ideias na Ágora provaram que o poder pode emanar dos próprios cidadãos, rompendo com o absolutismo de governantes autocratas.",
+              "exampleText": "As leis escritas que garantem nossos direitos civis, a divisão de poderes no governo, os tribunais de justiça e até mesmo as Olimpíadas mundiais nasceram dessas primeiras civilizações.",
+              "dailyLifeContext": "Quando votamos em eleições, consultamos o código de leis ou assistimos a debates públicos, estamos praticando invenções sociais criadas há mais de 2.500 anos na Mesopotâmia, no Egito e na Grécia."
             },
             "level": "basico",
             "exercises": [
@@ -2772,16 +2772,16 @@ const BASE_SUBJECTS_DATA: SubjectItem[] = [
             "id": "hist_mod",
             "subjectId": "historia",
             "themeNumber": 2,
-            "title": "Revoluções que Moldaram o Mundo Atual",
-            "subtitle": "Liberdade, Tecnologia e Direitos Humanos",
-            "summary": "O Iluminismo, a fábrica a vapor, as guerras mundiais e a Carta da ONU.",
+            "title": "História: As Grandes Revoluções e o Mundo Contemporâneo",
+            "subtitle": "Módulo 2 — Do Iluminismo e Máquina a Vapor à Declaração dos Direitos Humanos",
+            "summary": "Uma análise aprofundada sobre as transformações radicais que criaram o mundo moderno: o pensamento iluminista, a queda da monarquia absolutista na Revolução Francesa, a Revolução Industrial e a conquista histórica dos Direitos Humanos após as Guerras Mundiais.",
             "content": {
-              "questionPrompt": "Como surgiram os Direitos Humanos e as democracias modernas?",
-              "description": "A Revolução Francesa (1789) consagrou os ideais de Liberdade, Igualdade e Fraternidade. A Revolução Industrial transformou o trabalho com as máquinas a vapor e eletricidade.",
-              "numeratorExplanation": "Iluminismo: movimento intelectual que defendeu a razão contra o absolutismo.",
-              "denominatorExplanation": "Declaração Universal dos Direitos Humanos (1948): aprovada pela ONU após a Segunda Guerra Mundial para proteger a dignidade humana.",
-              "exampleText": "O direito ao voto universal, férias remuneradas e educação pública gratuita são conquistas dessas revoluções.",
-              "dailyLifeContext": "Conhecer as lutas do passado impede o regresso de regimes autoritários e protege as liberdades civis."
+              "questionPrompt": "Como as revoluções modernas conquistaram as liberdades civis e transformaram a sociedade?",
+              "description": "O mundo contemporâneo em que vivemos foi forjado por intensas batalhas de ideias e transformações econômicas entre os séculos dezoito e vinte. No século das luzes, filósofos iluministas como Voltaire, Montesquieu e Rousseau desafiaram o poder divino dos reis, defendendo que todos os homens nascem livres e iguais em direitos. Esse ideal explodiu na Revolução Francesa de 1789 com a queda da Bastilha e o lema universal Liberdade, Igualdade e Fraternidade, pondo fim ao Antigo Regime absolutista. Simultaneamente, na Inglaterra, a invenção da máquina a vapor inaugurou a Revolução Industrial, transferindo milhões de pessoas do campo para as cidades, criando fábricas modernas, ferrovias e a classe trabalhadora operária, que passou a lutar por jornadas justas e condições dignas de trabalho. Após as dores devastadoras da Primeira e Segunda Guerra Mundial no século vinte, as nações uniram-se em 1945 para fundar a ONU e proclamar a histórica Declaração Universal dos Direitos Humanos, consagrando a dignidade e a paz como valores inegociáveis para toda a humanidade.",
+              "numeratorExplanation": "A Força do Pensamento Iluminista e Revolucionário: A razão superou o obscurantismo e determinou que a soberania pertence ao povo, estabelecendo a separação dos poderes do Estado em Executivo, Legislativo e Judiciário.",
+              "denominatorExplanation": "A Consolidação dos Direitos Humanos Universais: A experiência das guerras mundiais ensinou à civilização que a paz só é possível quando a dignidade humana, a educação, a saúde e a justiça social são protegidas por leis internacionais.",
+              "exampleText": "A jornada de trabalho de 8 horas diárias, as férias remuneradas, o sufrágio universal com voto secreto para homens e mulheres, e a igualdade perante os tribunais são frutos diretos dessas revoluções históricas.",
+              "dailyLifeContext": "Cada vez que usufruímos de liberdade de expressão, direitos trabalhistas protegidos e proteção legal contra abusos de autoridade, estamos vivendo as conquistas reais dessas grandes revoluções da história humana."
             },
             "level": "avancado",
             "exercises": [

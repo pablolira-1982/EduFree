@@ -197,7 +197,20 @@ export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises
       setIsPlayingAudio(false);
     } else {
       const isEnglish = lesson.subjectId === 'ingles';
-      const speechText = `${lesson.content.questionPrompt}. ${lesson.content.description}. ${lesson.content.exampleText}`;
+      // Anuncia o tema/título da aula e narra com fidelidade o capítulo explicativo e exemplo
+      const parts: string[] = [];
+      if (lesson.title) {
+        // Formata o anúncio inicial para situar o aluno no tema
+        const cleanTitle = lesson.title.replace(/^[0-9]+\.\s*/, '').trim();
+        parts.push(`Aula: ${cleanTitle}`);
+      }
+      if (lesson.content.description) {
+        parts.push(lesson.content.description.trim());
+      }
+      if (lesson.content.exampleText) {
+        parts.push(`Exemplo prático: ${lesson.content.exampleText.trim()}`);
+      }
+      const speechText = parts.map(p => p.replace(/[.,;:!?]+$/, '')).join('. ') + '.';
       setIsPlayingAudio(true);
       tts.speak(speechText, isEnglish ? 'bilingual-en' : 'pt-BR', () => {
         setIsPlayingAudio(false);
@@ -531,8 +544,38 @@ export const LessonScreen: React.FC<Props> = ({ lesson, onBack, onStartExercises
                 </div>
               );
             })()
+          ) : lesson.subjectId === 'historia' ? (
+            /* Card Histórico Especializado: Linha do Tempo e Análise Historiográfica */
+            <div style={{
+              backgroundColor: '#FFFBEB',
+              borderRadius: '16px',
+              padding: '18px 20px',
+              border: '1px solid #FDE68A',
+              marginBottom: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '24px' }}>📜</span>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#92400E' }}>
+                    Capítulo Histórico e Legado Cultural
+                  </h4>
+                  <span style={{ fontSize: '12px', color: '#B45309' }}>
+                    Documento histórico e memória da humanidade
+                  </span>
+                </div>
+              </div>
+              <div style={{ fontSize: '14px', color: '#78350F', lineHeight: 1.6, backgroundColor: '#FFFFFF', padding: '14px 16px', borderRadius: '12px', border: '1px solid #FEF3C7' }}>
+                {lesson.content.numeratorExplanation}
+              </div>
+              <div style={{ fontSize: '13px', color: '#92400E', lineHeight: 1.5, backgroundColor: '#FEF9C3', padding: '10px 14px', borderRadius: '10px' }}>
+                <strong>Impacto Histórico:</strong> {lesson.content.denominatorExplanation}
+              </div>
+            </div>
           ) : (
-            /* Infográfico Conceitual Dinâmico e Didático para outras matérias (Ciências, História, etc.) */
+            /* Infográfico Conceitual Dinâmico e Didático para outras matérias (Ciências, Geografia, etc.) */
             <div style={{
               backgroundColor: '#F0FDF4',
               borderRadius: '16px',

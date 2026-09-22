@@ -107,20 +107,38 @@ export function buildSubject(
     const [title, level, ageGroup, concept, example] = seed;
     const lessonId = `${config.id}_m${num}`;
 
+    // Para História, constrói uma narrativa aprofundada como capítulo de livro didático
+    const isHistoria = config.id === 'historia';
+    const cleanTitle = title.replace(/^[0-9]+\.\s*/, '').trim();
+    const fullTitle = isHistoria ? `História: ${cleanTitle}` : cleanTitle;
+    const questionPrompt = isHistoria
+      ? `Como ${cleanTitle} transformou a trajetória histórica da humanidade?`
+      : `O que é ${cleanTitle} e como aplicar no dia a dia?`;
+
+    const descriptionText = isHistoria
+      ? `O estudo de ${cleanTitle} revela um momento decisivo da experiência humana no tempo. ${concept} Ao longo desse período histórico, profundas transformações sociais, políticas e culturais moldaram o cotidiano dos povos e influenciaram as gerações futuras. Compreender os acontecimentos desse contexto permite identificar causas, conflitos e desfechos que ainda ecoam no mundo contemporâneo e nas nossas instituições democráticas.`
+      : concept;
+
     const lesson: LessonItem = {
       id: lessonId,
       subjectId: config.id,
       themeNumber: num,
-      title,
+      title: fullTitle,
       subtitle: `Módulo ${num} — ${ageGroup}`,
       summary: concept,
       content: {
-        questionPrompt: `O que é ${title} e como aplicar no dia a dia?`,
-        description: concept,
-        numeratorExplanation: concept,
-        denominatorExplanation: example,
+        questionPrompt,
+        description: descriptionText,
+        numeratorExplanation: isHistoria
+          ? `Contexto Histórico e Causas: ${concept} A análise dos vestígios documentais e materiais comprova o impacto desse processo na organização social da época.`
+          : concept,
+        denominatorExplanation: isHistoria
+          ? `Desdobramentos e Transformações: ${example} Os efeitos desse acontecimento redefiniram fronteiras, estruturas de poder e direitos coletivos.`
+          : example,
         exampleText: example,
-        dailyLifeContext: `${title} é aplicado frequentemente em situações do quotidiano escolar e profissional. ${example}`
+        dailyLifeContext: isHistoria
+          ? `O legado de ${cleanTitle} está presente nos museus, nas leis, nas artes e na memória coletiva da humanidade. ${example}`
+          : `${title} é aplicado frequentemente em situações do quotidiano escolar e profissional. ${example}`
       },
       level,
       exercises: genExercises(config.id, lessonId, title, concept, num)

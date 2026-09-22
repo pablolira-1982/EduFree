@@ -17,7 +17,8 @@ const PT_COMMON_WORDS = new Set([
   'pronomes', 'pessoais', 'verbo', 'verbos', 'frase', 'frases', 'palavra', 'palavras',
   'tranquilidade', 'vida', 'dia', 'jogar', 'videogames', 'ouvir', 'músicas',
   'olá', 'ola', 'bom', 'boa', 'tarde', 'noite', 'ao', 'sair', 'você', 'ele', 'ela', 'eles', 'elas',
-  'opção', 'opcao', 'questão', 'questao'
+  'opção', 'opcao', 'questão', 'questao', 'dizemos', 'as', 'formas', 'no', 'presente',
+  'estudante', 'felizes', 'resposta', 'correta', 'incorreta'
 ]);
 
 const EN_COMMON_WORDS = new Set([
@@ -38,26 +39,51 @@ const EN_COMMON_WORDS = new Set([
 ]);
 
 /**
- * Limpa o texto antes de enviar para síntese vocal, removendo reticências (...) e pontuações
- * que causam a leitura literal da palavra 'ponto ponto' ou 'exclamação'.
+ * Sanitiza o texto para síntese de voz natural e fluida:
+ * - Evita terminantemente que o TTS fale "ponto", "ponto ponto" ou "exclamação".
+ * - Ajusta a pontuação exclusivamente para entonação e pausas oracionais naturais.
+ * - Remove aspas, parênteses e caracteres gráficos especiais.
  */
 export function cleanSpeechText(text: string): string {
   if (!text) return '';
   return text
     // Converte barras isoladas para 'ou' para evitar falar 'barra'
-    .replace(/\s*\/\s*/g, ' ou ')
-    // Remove reticências e sequências de pontos
-    .replace(/\.{2,}/g, ' ')
-    .replace(/…/g, ' ')
-    // Remove pontos colados no fim de aspas (ex: 'My name is.' -> 'My name is')
-    .replace(/\.+(['"])/g, '$1')
-    // Remove pontos soltos logo após aspas
-    .replace(/(['"])\s*\.+/g, '$1 ')
-    // Converte exclamações para ponto simples para evitar leitura oral de pontuação
-    .replace(/[!¡]/g, '.')
-    // Normaliza espaços em branco múltiplos
+    .replace(/\s*[/\\\\]\s*/g, ' ou ')
+    // Dois pontos e ponto e vírgula viram pausa suave (vírgula)
+    .replace(/[:;]/g, ', ')
+    // Exclamações viram ponto simples (pausa de cadência sem verbalizar "exclamação")
+    .replace(/[!¡]/g, '. ')
+    // Remove aspas de qualquer tipo (evita verbalizar "aspas")
+    .replace(/["“”‘’'`]/g, '')
+    // Remove parênteses, colchetes e chaves (evita falar "abre parênteses")
+    .replace(/[()[\]{}]/g, ' ')
+    // Traços e hífens viram espaços
+    .replace(/[-—–_]/g, ' ')
+    // Sequências de pontos (reticências .. ou ...) viram um único ponto
+    .replace(/\.{2,}/g, '. ')
+    .replace(/…/g, '. ')
+    // Sequências de vírgulas viram uma única vírgula
+    .replace(/,{2,}/g, ', ')
+    // Normaliza espaçamentos antes de pontuações
+    .replace(/\s+,/g, ', ')
+    .replace(/\s+\./g, '. ')
+    // Normaliza múltiplos espaços
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Higieniza um segmento individual para garantir que nunca inicie com ponto ou pontuação solta,
+ * o que causava o sintetizador a falar "ponto" no início da fala.
+ */
+export function cleanSegmentText(text: string): string {
+  if (!text) return '';
+  let s = cleanSpeechText(text);
+  // Remove pontuações no início do segmento (ex: ". O verbo" -> "O verbo")
+  s = s.replace(/^[.,;:!?\s]+/, '').trim();
+  // Se houver vírgula colada no ponto, normaliza
+  s = s.replace(/,\s*\./g, '.');
+  return s;
 }
 
 /**
@@ -73,7 +99,7 @@ export function classifyTextLanguage(str: string, defaultLang: 'pt-BR' | 'en-US'
   const words = clean.split(/\s+/).filter(Boolean);
   if (words.length === 0) return defaultLang;
 
-  // Frases e termos exatos
+  // Frases e termos exatos característicos de inglês
   if (
     clean === 'to be' ||
     clean === 'verb to be' ||
@@ -81,11 +107,19 @@ export function classifyTextLanguage(str: string, defaultLang: 'pt-BR' | 'en-US'
     clean === 'you are' ||
     clean === 'he is' ||
     clean === 'she is' ||
+    clean === 'it is' ||
     clean === 'we are' ||
     clean === 'they are' ||
     clean === 'greetings' ||
     clean === 'am, is, are' ||
-    clean === 'am is are'
+    clean === 'am is are' ||
+    clean === 'good morning' ||
+    clean === 'good afternoon' ||
+    clean === 'good evening' ||
+    clean === 'good night' ||
+    clean === 'how are you' ||
+    clean === 'my name is' ||
+    clean === 'nice to meet you'
   ) {
     return 'en-US';
   }
@@ -105,19 +139,22 @@ export function classifyTextLanguage(str: string, defaultLang: 'pt-BR' | 'en-US'
 }
 
 /**
- * Divide o texto bilíngue em segmentos para síntese de voz alternando vozes nativas.
- * Trata textos entre aspas ('Hello', 'I am'), termos entre parênteses (Greetings, Am, Is, Are),
- * e explicações em português.
+ * Divide o texto bilíngue em segmentos para síntese de voz alternando vozes nativas:
+ * - Português: Voz feminina Francisca (pt-BR)
+ * - Inglês: Voz feminina Jenny (en-US)
+ * Garante que termos em inglês ('To Be', 'I am', etc.) mudem para a voz en-US,
+ * e explicações em português permaneçam na voz pt-BR do Brasil.
  */
 export function parseBilingualSegments(text: string): SpeechSegment[] {
   if (!text || !text.trim()) return [];
 
-  // Pré-limpeza de pontuações indesejadas (sem 'ponto ponto')
-  const cleaned = cleanSpeechText(text);
-  const normalized = cleaned.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  // Normaliza aspas para facilitar matching de termos em destaque
+  const normalized = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
-  // Regex abrangente para detectar termos em inglês
-  const tokenRegex = /(?:'([^']+)'|"([^"]+)"|\(([A-Za-z\s,/'-]+)\)|\b(?:to be|verb to be|i am|you are|he is|she is|it is|we are|they are|good morning|good afternoon|good evening|good night|how are you|simple present|present continuous|past simple|second conditional|phrasal verbs|greetings|personal pronouns|family members|opposites|my name is|nice to meet you)\b|\b(?:I|You|He|She|We|They|It)\b(?=\s+significa))/gi;
+  // Regex abrangente para detectar termos em inglês (entre aspas ou vocábulos-chave gramaticais)
+  // Frases longas vêm antes das curtas para que "I am a student" nunca seja
+  // quebrado em "I am" (Jenny) + "a student" (Francisca).
+  const tokenRegex = /(?:'([^']+)'|"([^"]+)"|\b(?:i am a student|she is happy|he is happy|you are a student|we are students|they are students|my name is [a-z]+|nice to meet you|good morning|good afternoon|good evening|good night|how are you|simple present|present continuous|past simple|second conditional|phrasal verbs|personal pronouns|family members|verb to be|to be|i am|you are|he is|she is|it is|we are|they are|greetings|opposites)\b|\b(?:I|You|He|She|We|They|It)\b(?=\s+significa))/gi;
 
   const rawSegments: SpeechSegment[] = [];
   let lastIndex = 0;
@@ -131,9 +168,10 @@ export function parseBilingualSegments(text: string): SpeechSegment[] {
     // Texto explicativo em português antes do termo em inglês
     if (matchStart > lastIndex) {
       const preceding = normalized.slice(lastIndex, matchStart);
-      if (preceding.trim()) {
-        const lang = classifyTextLanguage(preceding, 'pt-BR');
-        rawSegments.push({ text: preceding.trim(), lang });
+      const cleanedPre = cleanSegmentText(preceding);
+      if (cleanedPre && /[a-zA-Z0-9À-ÿ]/.test(cleanedPre)) {
+        const lang = classifyTextLanguage(cleanedPre, 'pt-BR');
+        rawSegments.push({ text: cleanedPre, lang });
       }
     }
 
@@ -141,51 +179,42 @@ export function parseBilingualSegments(text: string): SpeechSegment[] {
     let content = matchedStr;
     const isQuoted = (matchedStr.startsWith("'") && matchedStr.endsWith("'")) ||
                      (matchedStr.startsWith('"') && matchedStr.endsWith('"'));
-    const isParenthesized = matchedStr.startsWith('(') && matchedStr.endsWith(')');
 
-    if (isQuoted || isParenthesized) {
+    if (isQuoted) {
       content = matchedStr.slice(1, -1).trim();
     }
-    content = content.replace(/\.+$/g, '').trim();
 
     let tokenLang: 'pt-BR' | 'en-US' = 'en-US';
-    if (isQuoted || isParenthesized) {
+    if (isQuoted) {
       tokenLang = classifyTextLanguage(content, 'en-US');
     }
 
-    rawSegments.push({ text: content, lang: tokenLang });
+    const cleanedContent = cleanSegmentText(content);
+    if (cleanedContent && /[a-zA-Z0-9À-ÿ]/.test(cleanedContent)) {
+      rawSegments.push({ text: cleanedContent, lang: tokenLang });
+    }
     lastIndex = matchEnd;
   }
 
   // Texto restante após último token
   if (lastIndex < normalized.length) {
     const trailing = normalized.slice(lastIndex);
-    if (trailing.trim()) {
-      const lang = classifyTextLanguage(trailing, 'pt-BR');
-      rawSegments.push({ text: trailing.trim(), lang });
+    const cleanedTrail = cleanSegmentText(trailing);
+    if (cleanedTrail && /[a-zA-Z0-9À-ÿ]/.test(cleanedTrail)) {
+      const lang = classifyTextLanguage(cleanedTrail, 'pt-BR');
+      rawSegments.push({ text: cleanedTrail, lang });
     }
   }
 
-  // Mesclar segmentos contíguos do mesmo idioma
+  // Mesclar segmentos contíguos do mesmo idioma de forma natural e sem pontuação artificial
   const merged: SpeechSegment[] = [];
   for (const seg of rawSegments) {
-    let cleanSegText = seg.text
-      .replace(/[()]/g, ' ')
-      .replace(/['"“”‘’]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!cleanSegText) continue;
-
     if (merged.length > 0 && merged[merged.length - 1].lang === seg.lang) {
       const prev = merged[merged.length - 1];
-      const needsSpace = !prev.text.endsWith(' ') &&
-                         !cleanSegText.startsWith('.') &&
-                         !cleanSegText.startsWith(',') &&
-                         !cleanSegText.startsWith('!') &&
-                         !cleanSegText.startsWith('?');
-      prev.text += (needsSpace ? ' ' : '') + cleanSegText;
+      const needsSpace = !prev.text.endsWith(' ');
+      prev.text += (needsSpace ? ' ' : '') + seg.text;
     } else {
-      merged.push({ text: cleanSegText, lang: seg.lang });
+      merged.push({ text: seg.text, lang: seg.lang });
     }
   }
 

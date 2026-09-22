@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { UserProfile } from '../core/types';
 import { SUBJECTS_DATA } from '../data/curriculum';
+import { getAllTestResults, type TestResultRecord } from '../db/database';
 
 interface Props {
   profile: UserProfile;
@@ -8,7 +9,34 @@ interface Props {
 }
 
 export const ProgressScreen: React.FC<Props> = ({ profile, onBack }) => {
-  const [activeTab, setActiveTab] = useState<'geral' | 'disciplinas' | 'conquistas'>('geral');
+  const [activeTab, setActiveTab] = useState<'geral' | 'disciplinas' | 'conquistas' | 'historico'>('geral');
+  const [testResults, setTestResults] = useState<TestResultRecord[]>([]);
+
+  useEffect(() => {
+    getAllTestResults().then(results => {
+      setTestResults(results);
+    });
+
+    const handleTestSaved = () => {
+      getAllTestResults().then(results => {
+        setTestResults(results);
+      });
+    };
+
+    window.addEventListener('edufree_test_saved', handleTestSaved);
+    return () => {
+      window.removeEventListener('edufree_test_saved', handleTestSaved);
+    };
+  }, []);
+
+  // Calcula estatísticas reais dos testes realizados
+  const totalTestsCount = testResults.length;
+  const averagePercentage = totalTestsCount > 0
+    ? Math.round(testResults.reduce((acc, r) => acc + r.percentage, 0) / totalTestsCount)
+    : 0;
+  const bestPercentage = totalTestsCount > 0
+    ? Math.max(...testResults.map(r => r.percentage))
+    : 0;
 
   const achievementsList = [
     {
@@ -93,19 +121,19 @@ export const ProgressScreen: React.FC<Props> = ({ profile, onBack }) => {
           borderRadius: '14px',
           padding: '4px',
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
+          gridTemplateColumns: '1fr 1fr 1fr 1.2fr',
           gap: '4px'
         }}>
           <button
             onClick={() => setActiveTab('geral')}
             style={{
-              padding: '8px',
+              padding: '8px 4px',
               borderRadius: '10px',
               border: 'none',
               backgroundColor: activeTab === 'geral' ? '#1E88E5' : 'transparent',
               color: activeTab === 'geral' ? '#FFFFFF' : '#6B7280',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer'
             }}
           >
@@ -114,32 +142,47 @@ export const ProgressScreen: React.FC<Props> = ({ profile, onBack }) => {
           <button
             onClick={() => setActiveTab('disciplinas')}
             style={{
-              padding: '8px',
+              padding: '8px 4px',
               borderRadius: '10px',
               border: 'none',
               backgroundColor: activeTab === 'disciplinas' ? '#1E88E5' : 'transparent',
               color: activeTab === 'disciplinas' ? '#FFFFFF' : '#6B7280',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer'
             }}
           >
-            Disciplinas (9)
+            Matérias
           </button>
           <button
             onClick={() => setActiveTab('conquistas')}
             style={{
-              padding: '8px',
+              padding: '8px 4px',
               borderRadius: '10px',
               border: 'none',
               backgroundColor: activeTab === 'conquistas' ? '#1E88E5' : 'transparent',
               color: activeTab === 'conquistas' ? '#FFFFFF' : '#6B7280',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer'
             }}
           >
-            Conquistas
+            Troféus
+          </button>
+          <button
+            onClick={() => setActiveTab('historico')}
+            style={{
+              padding: '8px 4px',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: activeTab === 'historico' ? '#1E88E5' : 'transparent',
+              color: activeTab === 'historico' ? '#FFFFFF' : '#6B7280',
+              fontWeight: 700,
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            Histórico 📊
           </button>
         </div>
       </div>
@@ -442,6 +485,132 @@ export const ProgressScreen: React.FC<Props> = ({ profile, onBack }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* CONTEÚDO: TAB HISTÓRICO & RANKING (DADOS REAIS GRAVADOS) */}
+      {activeTab === 'historico' && (
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Card Resumo do Aluno no Ranking */}
+          <div style={{
+            backgroundColor: '#1E293B',
+            borderRadius: '20px',
+            padding: '18px 20px',
+            color: '#FFFFFF',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div>
+                <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase' }}>
+                  Ranking de Aproveitamento
+                </span>
+                <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: 800 }}>
+                  {profile.name || 'Estudante'} 🏆
+                </h3>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '22px', fontWeight: 800, color: '#F59E0B' }}>
+                  {profile.points} XP
+                </span>
+                <div style={{ fontSize: '11px', color: '#CBD5E1' }}>Pontos Totais</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', paddingTop: '10px', borderTop: '1px solid #334155' }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#38BDF8' }}>{totalTestsCount}</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Testes Feitos</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#4ADE80' }}>{averagePercentage}%</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Média Geral</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#F43F5E' }}>{bestPercentage}%</div>
+                <div style={{ fontSize: '11px', color: '#94A3B8' }}>Melhor Nota</div>
+              </div>
+            </div>
+          </div>
+
+          <h4 style={{ margin: '6px 0 0 0', fontSize: '15px', fontWeight: 800, color: '#1F2937' }}>
+            Histórico Gravado de Testes ({totalTestsCount})
+          </h4>
+
+          {testResults.length === 0 ? (
+            <div style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '24px 20px',
+              textAlign: 'center',
+              border: '1px solid #E2E8F0',
+              color: '#64748B'
+            }}>
+              <span style={{ fontSize: '32px' }}>📝</span>
+              <p style={{ margin: '8px 0 4px 0', fontWeight: 700, color: '#1F2937' }}>
+                Nenhum teste registrado ainda
+              </p>
+              <span style={{ fontSize: '12px' }}>
+                Complete um Teste Rápido (10q) ou Simulado (20q) na aba Atividades para gravar as suas notas aqui!
+              </span>
+            </div>
+          ) : (
+            testResults.map((res, idx) => {
+              const isHigh = res.percentage >= 70;
+              const dateStr = res.completedAt ? new Date(res.completedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+              return (
+                <div
+                  key={res.id || idx}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    padding: '14px 16px',
+                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '12px',
+                      backgroundColor: isHigh ? '#ECFDF5' : '#FEF2F2',
+                      color: isHigh ? '#059669' : '#DC2626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '15px',
+                      fontWeight: 800,
+                      border: isHigh ? '1px solid #A7F3D0' : '1px solid #FECACA'
+                    }}>
+                      {res.percentage}%
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#1F2937' }}>
+                        {res.subjectTitle || res.subjectId}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px' }}>
+                        <span style={{ textTransform: 'capitalize' }}>Modo {res.testMode}</span>
+                        <span>•</span>
+                        <span>{res.score}/{res.totalQuestions} acertos</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#F59E0B' }}>
+                      +{res.pointsEarned} XP
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>
+                      {dateStr}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       )}
     </div>

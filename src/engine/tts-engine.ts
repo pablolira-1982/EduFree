@@ -8,9 +8,9 @@ export interface VoiceOption {
   gender?: 'female' | 'male';
 }
 
-import { parseBilingualSegments, cleanSpeechText, type SpeechSegment } from './bilingual-tts';
+import { parseBilingualSegments, cleanSpeechText, cleanSegmentText, type SpeechSegment } from './bilingual-tts';
 
-export { parseBilingualSegments, cleanSpeechText, type SpeechSegment };
+export { parseBilingualSegments, cleanSpeechText, cleanSegmentText, type SpeechSegment };
 
 export const MICROSOFT_EDGE_NEURAL_VOICES: VoiceOption[] = [
   {
@@ -122,7 +122,10 @@ export class TTSEngine {
    * Se offline e não houver cache, utiliza fallback inteligente do SpeechSynthesis.
    */
   public async speak(text: string, locale: string = 'pt-BR', onEnd?: () => void): Promise<void> {
-    const cleanText = cleanSpeechText(text);
+    // Mantemos o texto original para a segmentação: as aspas são uma pista
+    // importante para detectar frases inglesas antes da higienização da fala.
+    const sourceText = text;
+    const cleanText = cleanSpeechText(sourceText);
     if (!cleanText) {
       if (onEnd) onEnd();
       return;
@@ -143,15 +146,15 @@ export class TTSEngine {
         };
 
         if (isBilingual) {
-          const segments = parseBilingualSegments(cleanText);
+          const segments = parseBilingualSegments(sourceText);
           if (typeof (window as any).AndroidTTS.speakSegments === 'function' && segments.length > 0) {
             (window as any).AndroidTTS.speakSegments(JSON.stringify(segments));
             return;
           }
         }
 
-        const targetLang = locale === 'bilingual-en' || locale === 'bilingual' ? 'pt-BR' : locale;
-        const speechPureText = cleanText.replace(/[()]/g, ' ').replace(/['"“”‘’]/g, '').replace(/\s+/g, ' ').trim();
+        const targetLang = locale === 'bilingual-en' || locale === 'bilingual' ? 'pt-BR' : (locale === 'en-US' ? 'en-US' : 'pt-BR');
+        const speechPureText = cleanSegmentText(cleanText);
         (window as any).AndroidTTS.speak(speechPureText, targetLang);
         return;
       } catch (e) {
@@ -159,23 +162,22 @@ export class TTSEngine {
       }
     }
 
-    // Selecionar voz ou modo bilíngue adequado
-    let voiceId = this.preferredVoiceId;
+    // A voz do EduFree é SEMPRE feminina brasileira: Francisca (pt-BR-FranciscaNeural)
+    // Apenas para conteúdos ou termos em inglês na disciplina de Inglês alternamos para Jenny (en-US-JennyNeural)
+    let voiceId = 'pt-BR-FranciscaNeural';
     if (isBilingual) {
       voiceId = 'bilingual';
-    } else if (locale === 'pt-PT' && !voiceId.startsWith('pt-PT')) {
-      voiceId = 'pt-PT-RaquelNeural';
     } else if (locale === 'en-US') {
       voiceId = 'en-US-JennyNeural';
     }
 
-    const cacheKey = `edge_${voiceId}_${cleanText}`;
+    const cacheKey = `edge_v2_${voiceId}_${cleanText}`;
 
     // 1. Verificar cache local no IndexedDB (armazenamento persistente offline)
     try {
       const cached = await db.audioCache.get(cacheKey);
       if (cached && cached.blob) {
-        this.playAudioBlob(cached.blob, cleanText, locale, onEnd);
+        this.playAudioBlob(cached.blob, onEnd);
         return;
       }
     } catch (e) {
@@ -190,6 +192,13 @@ export class TTSEngine {
       const res = await fetch(endpoint);
 
       if (res.ok && res.headers.get('content-type')?.includes('audio')) {
+        const renderedVoices = res.headers.get('x-edufree-tts-voice') || '';
+        const expectedVoice = isBilingual
+          ? 'pt-BR-FranciscaNeural,en-US-JennyNeural'
+          : voiceId;
+        if (renderedVoices !== expectedVoice) {
+          throw new Error(`Resposta TTS sem a voz esperada: ${renderedVoices || 'não informada'}`);
+        }
         const audioBlob = await res.blob();
 
         // Salvar no IndexedDB para reproduções futuras 100% offline
@@ -204,18 +213,25 @@ export class TTSEngine {
         }
 
         if (!this.isSpeaking) return; // cancelado no meio do carregamento
-        this.playAudioBlob(audioBlob, cleanText, locale, onEnd);
+        this.playAudioBlob(audioBlob, onEnd);
         return;
       }
     } catch (fetchErr) {
-      console.warn('Erro ao conectar ao Microsoft Edge TTS, acionando fallback local:', fetchErr);
+      console.error('Microsoft Edge TTS não ficou disponível; voz sintética foi bloqueada.', fetchErr);
     }
 
-    // 3. Fallback: síntese de fala do navegador se a requisição falhou e não há cache
-    this.speakWithSpeechSynthesis(cleanText, locale, onEnd);
+    // Nunca usar a voz local por padrão: ela é a origem da fala robótica.
+    // O modo de contingência só pode ser habilitado explicitamente durante
+    // diagnóstico por quem estiver com acesso ao armazenamento local.
+    if (localStorage.getItem('edufree_allow_device_tts') === 'true') {
+      this.speakWithSpeechSynthesis(cleanText, locale, onEnd);
+    } else {
+      this.isSpeaking = false;
+      if (onEnd) onEnd();
+    }
   }
 
-  private playAudioBlob(blob: Blob, cleanText: string, locale: string, onEnd?: () => void) {
+  private playAudioBlob(blob: Blob, onEnd?: () => void) {
     const audioUrl = URL.createObjectURL(blob);
     const audio = new Audio(audioUrl);
     this.currentAudio = audio;
@@ -231,22 +247,54 @@ export class TTSEngine {
       console.warn('Erro na reprodução do áudio:', e);
       URL.revokeObjectURL(audioUrl);
       this.currentAudio = null;
-      // Fallback resiliente imediato
-      this.speakWithSpeechSynthesis(cleanText, locale, onEnd);
+      this.isSpeaking = false;
+      if (onEnd) onEnd();
     };
 
     audio.play().catch(err => {
       console.warn('Autoplay impedido ou falhou:', err);
       URL.revokeObjectURL(audioUrl);
       this.currentAudio = null;
-      // Fallback resiliente imediato caso a política do navegador impeça áudio gerado assincronamente
-      this.speakWithSpeechSynthesis(cleanText, locale, onEnd);
+      this.isSpeaking = false;
+      if (onEnd) onEnd();
     });
   }
 
   /**
+   * Localiza a melhor voz feminina de estúdio para o idioma correspondente,
+   * garantindo que a voz brasileira seja sempre feminina natural e nunca robotizada.
+   */
+  private getBestVoiceForLocale(locale: string): SpeechSynthesisVoice | null {
+    if (this.voices.length === 0) {
+      this.loadLocalVoices();
+    }
+    if (this.voices.length === 0) return null;
+
+    const isEn = locale.toLowerCase().startsWith('en');
+    if (isEn) {
+      // Prioriza voz feminina norte-americana (Jenny, Samantha, Google US English, etc.)
+      return (
+        this.voices.find(v => v.lang.startsWith('en') && /jenny|samantha|zira|female|natural|online/i.test(v.name)) ||
+        this.voices.find(v => v.lang.startsWith('en') && /google us english/i.test(v.name)) ||
+        this.voices.find(v => v.lang === 'en-US') ||
+        this.voices.find(v => v.lang.startsWith('en')) ||
+        null
+      );
+    }
+
+    // Padrão: Voz feminina brasileira (Francisca, Luciana, Leticia, Google português do Brasil)
+    return (
+      this.voices.find(v => (v.lang === 'pt-BR' || v.lang.includes('BR')) && /francisca|luciana|leticia|helena|maria|female|mulher|natural|online/i.test(v.name)) ||
+      this.voices.find(v => /google português do brasil/i.test(v.name)) ||
+      this.voices.find(v => v.lang === 'pt-BR') ||
+      this.voices.find(v => v.lang.startsWith('pt')) ||
+      null
+    );
+  }
+
+  /**
    * Fallback com síntese local Web Speech API caso não haja rede
-   * No modo bilíngue, segmenta e troca a voz nativa entre PT e EN para pronúncia impecável.
+   * No modo bilíngue, segmenta e troca a voz nativa entre PT (Francisca) e EN (Jenny)
    */
   private speakWithSpeechSynthesis(text: string, locale: string, onEnd?: () => void) {
     if (!this.synth) {
@@ -266,18 +314,22 @@ export class TTSEngine {
       }
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = locale === 'pt-PT' ? 'pt-PT' : locale === 'en-US' ? 'en-US' : 'pt-BR';
-    utterance.rate = 0.98;
-    utterance.pitch = 1.0;
-
-    if (this.voices.length === 0) {
-      this.loadLocalVoices();
+    const cleanedPure = cleanSegmentText(text);
+    if (!cleanedPure) {
+      this.isSpeaking = false;
+      if (onEnd) onEnd();
+      return;
     }
 
-    const targetVoices = this.voices.filter(v => v.lang.startsWith(locale.substring(0, 2)));
-    if (targetVoices.length > 0) {
-      utterance.voice = targetVoices[0];
+    const utterance = new SpeechSynthesisUtterance(cleanedPure);
+    utterance.lang = locale === 'en-US' ? 'en-US' : 'pt-BR';
+    // Inglês reduzido para aprendizagem; português em velocidade natural.
+    utterance.rate = utterance.lang === 'en-US' ? 0.90 : 1.0;
+    utterance.pitch = 1.0;
+
+    const targetVoice = this.getBestVoiceForLocale(utterance.lang);
+    if (targetVoice) {
+      utterance.voice = targetVoice;
     }
 
     utterance.onend = () => {
@@ -295,16 +347,13 @@ export class TTSEngine {
 
   /**
    * Executa fila encadeada de segmentos com síntese de voz local (Web Speech API)
+   * Alternando voz feminina brasileira e americana sem falar pontuações
    */
   private speakSegmentsWithSpeechSynthesis(segments: SpeechSegment[], onEnd?: () => void) {
     if (!this.synth || segments.length === 0) {
       this.isSpeaking = false;
       if (onEnd) onEnd();
       return;
-    }
-
-    if (this.voices.length === 0) {
-      this.loadLocalVoices();
     }
 
     let currentIndex = 0;
@@ -317,13 +366,18 @@ export class TTSEngine {
       }
 
       const seg = segments[currentIndex++];
-      const utterance = new SpeechSynthesisUtterance(seg.text);
-      utterance.lang = seg.lang;
-      utterance.rate = 0.98;
+      const cleanSeg = cleanSegmentText(seg.text);
+      if (!cleanSeg) {
+        playNext();
+        return;
+      }
 
-      const exactVoices = this.voices.filter(v => v.lang.toLowerCase().replace('_', '-') === seg.lang.toLowerCase());
-      const prefixVoices = this.voices.filter(v => v.lang.toLowerCase().startsWith(seg.lang.substring(0, 2).toLowerCase()));
-      const targetVoice = exactVoices[0] || prefixVoices[0];
+      const utterance = new SpeechSynthesisUtterance(cleanSeg);
+      utterance.lang = seg.lang;
+      // Inglês reduzido para aprendizagem; português em velocidade natural.
+      utterance.rate = seg.lang === 'en-US' ? 0.90 : 1.0;
+
+      const targetVoice = this.getBestVoiceForLocale(seg.lang);
       if (targetVoice) {
         utterance.voice = targetVoice;
       }

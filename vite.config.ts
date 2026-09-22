@@ -40,14 +40,27 @@ const EN_COMMON_WORDS = new Set([
 function cleanSpeechText(text: string): string {
   if (!text) return '';
   return text
-    .replace(/\s*\/\s*/g, ' ou ')
-    .replace(/\.{2,}/g, ' ')
-    .replace(/…/g, ' ')
-    .replace(/\.+(['"])/g, '$1')
-    .replace(/(['"])\s*\.+/g, '$1 ')
-    .replace(/[!¡]/g, '.')
+    .replace(/\s*[/\\\\]\s*/g, ' ou ')
+    .replace(/[:;]/g, ', ')
+    .replace(/[!¡]/g, '. ')
+    .replace(/["“”‘’'`]/g, '')
+    .replace(/[()[\]{}]/g, ' ')
+    .replace(/[-—–_]/g, ' ')
+    .replace(/\.{2,}/g, '. ')
+    .replace(/…/g, '. ')
+    .replace(/,{2,}/g, ', ')
+    .replace(/\s+,/g, ', ')
+    .replace(/\s+\./g, '. ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function cleanSegmentText(text: string): string {
+  if (!text) return '';
+  let s = cleanSpeechText(text);
+  s = s.replace(/^[.,;:!?\s]+/, '').trim();
+  s = s.replace(/,\s*\./g, '.');
+  return s;
 }
 
 function classifyTextLanguage(str: string, defaultLang: 'pt-BR' | 'en-US' = 'pt-BR'): 'pt-BR' | 'en-US' {
@@ -64,11 +77,19 @@ function classifyTextLanguage(str: string, defaultLang: 'pt-BR' | 'en-US' = 'pt-
     clean === 'you are' ||
     clean === 'he is' ||
     clean === 'she is' ||
+    clean === 'it is' ||
     clean === 'we are' ||
     clean === 'they are' ||
     clean === 'greetings' ||
     clean === 'am, is, are' ||
-    clean === 'am is are'
+    clean === 'am is are' ||
+    clean === 'good morning' ||
+    clean === 'good afternoon' ||
+    clean === 'good evening' ||
+    clean === 'good night' ||
+    clean === 'how are you' ||
+    clean === 'my name is' ||
+    clean === 'nice to meet you'
   ) {
     return 'en-US';
   }
@@ -86,9 +107,10 @@ function classifyTextLanguage(str: string, defaultLang: 'pt-BR' | 'en-US' = 'pt-
 
 function parseBilingualSegments(text: string): { text: string; lang: 'pt-BR' | 'en-US' }[] {
   if (!text || !text.trim()) return [];
-  const cleaned = cleanSpeechText(text);
-  const normalized = cleaned.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-  const tokenRegex = /(?:'([^']+)'|"([^"]+)"|\(([A-Za-z\s,/'-]+)\)|\b(?:to be|verb to be|i am|you are|he is|she is|it is|we are|they are|good morning|good afternoon|good evening|good night|how are you|simple present|present continuous|past simple|second conditional|phrasal verbs|greetings|personal pronouns|family members|opposites|my name is|nice to meet you)\b|\b(?:I|You|He|She|We|They|It)\b(?=\s+significa))/gi;
+  const normalized = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  // Frases longas vêm antes das curtas para não dividir "I am a student"
+  // entre a voz Jenny e a voz Francisca.
+  const tokenRegex = /(?:'([^']+)'|"([^"]+)"|\b(?:i am a student|she is happy|he is happy|you are a student|we are students|they are students|my name is [a-z]+|nice to meet you|good morning|good afternoon|good evening|good night|how are you|simple present|present continuous|past simple|second conditional|phrasal verbs|personal pronouns|family members|verb to be|to be|i am|you are|he is|she is|it is|we are|they are|greetings|opposites)\b|\b(?:I|You|He|She|We|They|It)\b(?=\s+significa))/gi;
 
   const rawSegments: { text: string; lang: 'pt-BR' | 'en-US' }[] = [];
   let lastIndex = 0;
@@ -101,56 +123,48 @@ function parseBilingualSegments(text: string): { text: string; lang: 'pt-BR' | '
 
     if (matchStart > lastIndex) {
       const preceding = normalized.slice(lastIndex, matchStart);
-      if (preceding.trim()) {
-        rawSegments.push({ text: preceding.trim(), lang: classifyTextLanguage(preceding, 'pt-BR') });
+      const cleanedPre = cleanSegmentText(preceding);
+      if (cleanedPre && /[a-zA-Z0-9À-ÿ]/.test(cleanedPre)) {
+        rawSegments.push({ text: cleanedPre, lang: classifyTextLanguage(cleanedPre, 'pt-BR') });
       }
     }
 
     let content = matchedStr;
     const isQuoted = (matchedStr.startsWith("'") && matchedStr.endsWith("'")) ||
                      (matchedStr.startsWith('"') && matchedStr.endsWith('"'));
-    const isParenthesized = matchedStr.startsWith('(') && matchedStr.endsWith(')');
 
-    if (isQuoted || isParenthesized) {
+    if (isQuoted) {
       content = matchedStr.slice(1, -1).trim();
     }
-    content = content.replace(/\.+$/g, '').trim();
 
     let tokenLang: 'pt-BR' | 'en-US' = 'en-US';
-    if (isQuoted || isParenthesized) {
+    if (isQuoted) {
       tokenLang = classifyTextLanguage(content, 'en-US');
     }
 
-    rawSegments.push({ text: content, lang: tokenLang });
+    const cleanedContent = cleanSegmentText(content);
+    if (cleanedContent && /[a-zA-Z0-9À-ÿ]/.test(cleanedContent)) {
+      rawSegments.push({ text: cleanedContent, lang: tokenLang });
+    }
     lastIndex = matchEnd;
   }
 
   if (lastIndex < normalized.length) {
     const trailing = normalized.slice(lastIndex);
-    if (trailing.trim()) {
-      rawSegments.push({ text: trailing.trim(), lang: classifyTextLanguage(trailing, 'pt-BR') });
+    const cleanedTrail = cleanSegmentText(trailing);
+    if (cleanedTrail && /[a-zA-Z0-9À-ÿ]/.test(cleanedTrail)) {
+      rawSegments.push({ text: cleanedTrail, lang: classifyTextLanguage(cleanedTrail, 'pt-BR') });
     }
   }
 
   const merged: { text: string; lang: 'pt-BR' | 'en-US' }[] = [];
   for (const seg of rawSegments) {
-    let cleanSegText = seg.text
-      .replace(/[()]/g, ' ')
-      .replace(/['"“”‘’]/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!cleanSegText) continue;
-
     if (merged.length > 0 && merged[merged.length - 1].lang === seg.lang) {
       const prev = merged[merged.length - 1];
-      const needsSpace = !prev.text.endsWith(' ') &&
-                         !cleanSegText.startsWith('.') &&
-                         !cleanSegText.startsWith(',') &&
-                         !cleanSegText.startsWith('!') &&
-                         !cleanSegText.startsWith('?');
-      prev.text += (needsSpace ? ' ' : '') + cleanSegText;
+      const needsSpace = !prev.text.endsWith(' ');
+      prev.text += (needsSpace ? ' ' : '') + seg.text;
     } else {
-      merged.push({ text: cleanSegText, lang: seg.lang });
+      merged.push({ text: seg.text, lang: seg.lang });
     }
   }
   return merged;
@@ -188,6 +202,7 @@ function edgeTTSPlugin(): Plugin {
             const cached = memoryCache.get(cacheKey)!;
             res.statusCode = 200;
             res.setHeader('Content-Type', 'audio/mpeg');
+            res.setHeader('X-EduFree-TTS-Voice', 'pt-BR-FranciscaNeural,en-US-JennyNeural');
             res.setHeader('Content-Length', cached.length);
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             res.end(cached);
@@ -196,8 +211,11 @@ function edgeTTSPlugin(): Plugin {
 
           // Sintetizar cada segmento em paralelo com a respectiva voz neural
           const promises = segments.map(async (seg, idx) => {
-            const segVoice = seg.lang === 'en-US' ? 'en-US-JennyNeural' : 'pt-BR-FranciscaNeural';
+            const isEnglishSeg = seg.lang === 'en-US';
+            const segVoice = isEnglishSeg ? 'en-US-JennyNeural' : 'pt-BR-FranciscaNeural';
             const segLang = seg.lang;
+            // Jenny reduzida para aprendizagem; Francisca em velocidade natural.
+            const segRate = rate !== 'default' ? rate : (isEnglishSeg ? '-10%' : 'default');
             const tmpFile = path.join(
               os.tmpdir(),
               `edufree_bi_${Date.now()}_${idx}_${Math.random().toString(36).substring(7)}.mp3`
@@ -206,7 +224,7 @@ function edgeTTSPlugin(): Plugin {
               voice: segVoice,
               lang: segLang,
               outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-              rate: rate === 'default' ? 'default' : rate
+              rate: segRate
             });
 
             await tts.ttsPromise(seg.text, tmpFile);
@@ -225,6 +243,7 @@ function edgeTTSPlugin(): Plugin {
             memoryCache.set(cacheKey, combined);
             res.statusCode = 200;
             res.setHeader('Content-Type', 'audio/mpeg');
+            res.setHeader('X-EduFree-TTS-Voice', 'pt-BR-FranciscaNeural,en-US-JennyNeural');
             res.setHeader('Content-Length', combined.length);
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
             res.end(combined);
@@ -241,11 +260,13 @@ function edgeTTSPlugin(): Plugin {
       const singleVoice = resolvedVoice === 'bilingual' 
         ? (classifyTextLanguage(text.trim(), 'pt-BR') === 'en-US' ? 'en-US-JennyNeural' : 'pt-BR-FranciscaNeural')
         : resolvedVoice;
-      const cacheKey = `${singleVoice}_${rate}_${text.trim()}`;
+      const singleVoiceRate = rate !== 'default' ? rate : (singleVoice.startsWith('en-') ? '-10%' : 'default');
+      const cacheKey = `${singleVoice}_${singleVoiceRate}_${text.trim()}`;
       if (memoryCache.has(cacheKey)) {
         const cached = memoryCache.get(cacheKey)!;
         res.statusCode = 200;
         res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('X-EduFree-TTS-Voice', singleVoice);
         res.setHeader('Content-Length', cached.length);
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         res.end(cached);
@@ -262,7 +283,7 @@ function edgeTTSPlugin(): Plugin {
         voice: singleVoice,
         lang,
         outputFormat: 'audio-24khz-48kbitrate-mono-mp3',
-        rate: rate === 'default' ? 'default' : rate
+        rate: singleVoiceRate
       });
 
       await tts.ttsPromise(text, tmpFile);
@@ -279,6 +300,7 @@ function edgeTTSPlugin(): Plugin {
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('X-EduFree-TTS-Voice', singleVoice);
         res.setHeader('Content-Length', audioBuffer.length);
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         res.end(audioBuffer);

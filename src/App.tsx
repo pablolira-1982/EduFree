@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { ScreenType, UserProfile, TestMode, ExerciseItem } from './core/types';
-import { initDatabase, DEFAULT_USER_PROFILE, db } from './db/database';
+import { initDatabase, DEFAULT_USER_PROFILE, db, saveTestResult } from './db/database';
 import { SUBJECTS_DATA } from './data/curriculum';
 import { expandTo60Questions, createDisciplineTestSession } from './data/exercise-bank-builder';
 import { SplashScreen } from './screens/SplashScreen';
@@ -14,7 +14,6 @@ import { FeedbackScreen } from './screens/FeedbackScreen';
 import { ProgressScreen } from './screens/ProgressScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { OfflinePacksScreen } from './screens/OfflinePacksScreen';
-import { TutorScreen } from './screens/TutorScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { CompletionScreen } from './screens/CompletionScreen';
 import { BottomNav } from './components/layout/BottomNav';
@@ -32,6 +31,8 @@ export const App: React.FC = () => {
   // Sessão personalizada de exercícios / simulados por disciplina
   const [customTestQuestions, setCustomTestQuestions] = useState<ExerciseItem[] | null>(null);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
+  const [testScore, setTestScore] = useState<number>(0);
+  const [currentTestMode, setCurrentTestMode] = useState<TestMode>('modulo');
 
   useEffect(() => {
     initDatabase().then((loadedProfile) => {
@@ -64,6 +65,9 @@ export const App: React.FC = () => {
     setProfile(updated);
     try {
       localStorage.setItem('edufree_user_name', updated.name);
+      if (typeof window !== 'undefined' && (window as any).AndroidStorage) {
+        (window as any).AndroidStorage.setString('edufree_user_name', updated.name);
+      }
     } catch (e) {
       console.warn(e);
     }
@@ -99,6 +103,8 @@ export const App: React.FC = () => {
 
   const handleStartTestSession = (subjectId: string, testMode: TestMode, count: number, themeId?: string) => {
     setActiveSubjectId(subjectId);
+    setCurrentTestMode(testMode);
+    setTestScore(0);
     const questions = createDisciplineTestSession(subjectId, testMode, count, themeId);
     setCustomTestQuestions(questions);
     setCurrentExerciseIndex(0);
@@ -110,6 +116,7 @@ export const App: React.FC = () => {
     setIsExerciseCorrect(correct);
 
     if (correct) {
+      setTestScore(prev => prev + 1);
       const updatedProfile = {
         ...profile,
         points: profile.points + 25,
@@ -122,12 +129,34 @@ export const App: React.FC = () => {
     setCurrentScreen('feedback');
   };
 
-  const handleNextExercise = () => {
+  const handleNextExercise = async () => {
     if (currentExerciseIndex + 1 < activeExercises.length) {
       setCurrentExerciseIndex(prev => prev + 1);
       setCurrentScreen('exercise');
     } else {
+      // Teste ou módulo concluído: salva o resultado histórico no banco de dados e ranking
+      const totalQ = activeExercises.length;
+      const finalScore = isExerciseCorrect ? testScore + 1 : testScore;
+      const pct = Math.round((finalScore / totalQ) * 100);
+      const pointsEarned = finalScore * 25;
+
+      try {
+        await saveTestResult({
+          subjectId: activeSubjectId,
+          subjectTitle: activeSubject?.title || activeSubjectId,
+          testMode: customTestQuestions ? currentTestMode : 'modulo',
+          score: finalScore,
+          totalQuestions: totalQ,
+          percentage: pct,
+          pointsEarned,
+          completedAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('Erro ao registrar histórico do teste:', e);
+      }
+
       setCurrentExerciseIndex(0);
+      setTestScore(0);
       setCustomTestQuestions(null);
       setCurrentScreen('completion');
     }
@@ -274,43 +303,12 @@ export const App: React.FC = () => {
         <OfflinePacksScreen onBack={() => setCurrentScreen('home')} />
       )}
 
-      {currentScreen === 'tutor' && (
-        <TutorScreen onBack={() => setCurrentScreen('home')} />
-      )}
-
       {currentScreen === 'settings' && (
         <SettingsScreen
           profile={profile}
           onBack={() => setCurrentScreen('home')}
           onUpdateProfile={handleUpdateProfile}
         />
-      )}
-
-      {/* Botão de Acesso Rápido ao Tutor Flutuante no Home */}
-      {currentScreen === 'home' && (
-        <button
-          onClick={() => setCurrentScreen('tutor')}
-          style={{
-            position: 'fixed',
-            right: '20px',
-            bottom: '84px',
-            width: '54px',
-            height: '54px',
-            borderRadius: '50%',
-            backgroundColor: '#00183c',
-            border: '2px solid #36C5F0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 6px 20px rgba(0, 24, 60, 0.4)',
-            cursor: 'pointer',
-            zIndex: 90,
-            transition: 'transform 0.2s ease'
-          }}
-          title="Tutor de IA (Offline)"
-        >
-          <img src="/assets/Robo_EduFree.png" alt="Tutor" style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
-        </button>
       )}
 
       {/* Barra de Navegação Inferior para Telas Principais */}

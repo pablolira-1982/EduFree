@@ -9,6 +9,19 @@ export interface ProgressRecord {
   completedAt: string;
 }
 
+export interface TestResultRecord {
+  id?: number;
+  subjectId: string;
+  subjectTitle?: string;
+  themeId?: string;
+  testMode: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  pointsEarned: number;
+  completedAt: string;
+}
+
 export interface AudioCacheRecord {
   key: string;
   blob: Blob;
@@ -30,6 +43,7 @@ export interface FavoriteItem {
 export class EduFreeDatabase extends Dexie {
   profiles!: Table<UserProfile, string>;
   progress!: Table<ProgressRecord, number>;
+  testResults!: Table<TestResultRecord, number>;
   packs!: Table<OfflinePack, string>;
   audioCache!: Table<AudioCacheRecord, string>;
   favorites!: Table<FavoriteItem, string>;
@@ -45,6 +59,14 @@ export class EduFreeDatabase extends Dexie {
     this.version(3).stores({
       profiles: 'id, name, locale',
       progress: '++id, lessonId, completed',
+      packs: 'id, subject, installed',
+      audioCache: 'key, createdAt',
+      favorites: 'id, type, subjectId, createdAt'
+    });
+    this.version(4).stores({
+      profiles: 'id, name, locale',
+      progress: '++id, lessonId, completed',
+      testResults: '++id, subjectId, testMode, completedAt',
       packs: 'id, subject, installed',
       audioCache: 'key, createdAt',
       favorites: 'id, type, subjectId, createdAt'
@@ -100,14 +122,12 @@ export async function clearUserData(): Promise<void> {
 }
 
 export async function initDatabase(): Promise<UserProfile> {
-  // 1. Tentar carregar de localStorage para resposta síncrona/imediata à prova de falhas
+  // 1. Tentar carregar de localStorage / AndroidStorage para resposta síncrona/imediata
   let cachedName = '';
   try {
     cachedName = localStorage.getItem('edufree_user_name') || '';
-    // Limpar mock legado de desenvolvimento se existir
-    if (cachedName === 'Pablo Lira') {
-      cachedName = '';
-      localStorage.removeItem('edufree_user_name');
+    if (!cachedName && typeof window !== 'undefined' && (window as any).AndroidStorage) {
+      cachedName = (window as any).AndroidStorage.getString('edufree_user_name', '');
     }
   } catch (e) {
     console.warn(e);
@@ -121,14 +141,7 @@ export async function initDatabase(): Promise<UserProfile> {
     };
     await db.profiles.put(initial);
     profile = initial;
-  } else if (profile.name === 'Pablo Lira') {
-    // Resetar dados de teste anteriores para começar limpo
-    profile = {
-      ...DEFAULT_USER_PROFILE,
-      name: cachedName
-    };
-    await db.profiles.put(profile);
-  } else if (cachedName && profile.name !== cachedName) {
+  } else if (cachedName && !profile.name) {
     profile.name = cachedName;
     await db.profiles.put(profile);
   }
@@ -139,6 +152,29 @@ export async function initDatabase(): Promise<UserProfile> {
   }
 
   return profile;
+}
+
+export async function saveTestResult(record: Omit<TestResultRecord, 'id'>): Promise<number> {
+  try {
+    const id = await db.testResults.add(record as TestResultRecord);
+    // Dispara evento global para atualização de progresso em tempo real
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('edufree_test_saved', { detail: record }));
+    }
+    return id as number;
+  } catch (e) {
+    console.error('Erro ao salvar resultado do teste:', e);
+    return 0;
+  }
+}
+
+export async function getAllTestResults(): Promise<TestResultRecord[]> {
+  try {
+    return await db.testResults.orderBy('completedAt').reverse().toArray();
+  } catch (e) {
+    console.error('Erro ao listar resultados de testes:', e);
+    return [];
+  }
 }
 
 export async function toggleFavorite(item: Omit<FavoriteItem, 'createdAt'>): Promise<boolean> {
